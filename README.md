@@ -1,24 +1,3 @@
-# SentinelAI Fusion
-
-Multi-layered AI-powered cyber threat intelligence and defense platform.
-
-## Architecture
-
-```
-D:/Projects/Sentinel/
-├── backend/          # FastAPI Python backend
-│   ├── main.py       # FastAPI app entry point
-│   ├── models/       # Analysis engines (NLP, URL, Header, Fusion)
-│   ├── intelligence/ # Threat knowledge graph (NetworkX)
-│   ├── chat/         # SentinelChat (Claude API)
-│   └── routers/      # API route handlers
-├── sentiAi/          # Next.js 16 frontend
-│   ├── app/          # Pages (dashboard, analyze, chat, intelligence, campaigns)
-│   ├── components/   # UI components
-│   └── lib/api.ts    # Typed API client
-├── start_backend.bat
-└── start_frontend.bat
-```
 
 ## Quick Start
 
@@ -26,7 +5,6 @@ D:/Projects/Sentinel/
 ```bash
 cd backend
 pip install -r requirements.txt
-# Set ANTHROPIC_API_KEY in .env for SentinelChat
 python -m uvicorn main:app --port 8001 --reload
 ```
 

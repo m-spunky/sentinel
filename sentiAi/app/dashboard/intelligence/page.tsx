@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { Search, PlusCircle, ShieldAlert, Globe, Activity, LayoutDashboard, Target, Share2, MoreHorizontal, Maximize2, ZoomIn, ZoomOut, RotateCcw, Filter, User } from "lucide-react"
+import { Search, Target, Share2, Activity, Filter, PlusCircle, Download } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -75,18 +75,17 @@ export default function IntelligencePage() {
                  
                  <div className="flex flex-wrap items-center justify-center gap-4">
                     {[
-                      { label: "Sync OSINT", icon: Share2, color: "purple" },
-                      { label: "Deep Forensic Scan", icon: Activity, color: "purple" },
-                      { label: "Export Evidence", icon: Download, color: "purple" },
+                      { label: "Sync OSINT", icon: Share2 },
+                      { label: "Deep Forensic Scan", icon: Activity },
+                      { label: "Export Evidence", icon: Download },
                     ].map((btn, i) => (
-                      <Button 
-                         key={i} 
-                         variant="outline" 
-                         className="h-16 px-8 rounded-2xl border-2 border-purple-500/20 hover:border-purple-500/50 text-purple-400 hover:bg-purple-500/10 font-black uppercase tracking-[0.1em] text-xs transition-all hover:scale-105 active:scale-95 shadow-xl"
+                      <button
+                         key={i}
+                         className="flex items-center gap-2 px-6 py-3 rounded-lg border border-blue-500/20 hover:border-blue-500/40 text-blue-400 hover:bg-blue-500/10 text-xs font-bold uppercase tracking-widest transition-all"
                       >
-                         <btn.icon className="h-5 w-5 mr-3" />
+                         <btn.icon className="h-4 w-4" />
                          {btn.label}
-                      </Button>
+                      </button>
                     ))}
                  </div>
               </CardContent>
@@ -97,23 +96,3 @@ export default function IntelligencePage() {
   )
 }
 
-function Download(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" x2="12" y1="15" y2="3" />
-    </svg>
-  )
-}

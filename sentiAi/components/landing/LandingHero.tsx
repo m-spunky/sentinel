@@ -10,24 +10,23 @@ import { Badge } from "@/components/ui/badge"
 
 export function LandingHero() {
   return (
-    <section className="relative min-h-[80vh] flex flex-col items-center justify-center py-24 px-6 overflow-hidden bg-black">
-      {/* 🔮 Background Spotlight Effect */}
-      <div className="absolute top-[20%] left-1/2 -translate-x-1/2 h-[600px] w-[800px] bg-accent/10 rounded-full blur-[180px] -z-10 animate-pulse" />
-      <div className="absolute bottom-[-10%] left-[-10%] h-[500px] w-[500px] bg-accent/5 rounded-full blur-[140px] -z-10" />
+    <section className="relative min-h-[80vh] flex flex-col items-center justify-center py-24 px-6 overflow-hidden bg-[#0a0e1a]">
+      {/* Background Spotlight */}
+      <div className="absolute top-[20%] left-1/2 -translate-x-1/2 h-[600px] w-[800px] bg-blue-500/8 rounded-full blur-[180px] -z-10" />
+      <div className="absolute bottom-[-10%] right-[-5%] h-[400px] w-[400px] bg-amber-500/5 rounded-full blur-[140px] -z-10" />
+      <div className="absolute inset-0 bg-grid opacity-30 -z-10" />
       
       {/* 🚀 Main Copy Layer */}
       <div className="max-w-7xl mx-auto px-6 text-center space-y-10 relative z-10">
         <div className="space-y-6 flex flex-col items-center max-w-4xl mx-auto">
-           <Badge variant="outline" className="cyber-border text-accent px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.3em] uppercase bg-accent/5 animate-in fade-in slide-in-from-top-4 duration-1000">
-              Nexus-4 Hybrid Intelligence
+           <Badge variant="outline" className="border-blue-500/30 text-blue-400 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-[0.3em] uppercase bg-blue-500/8 font-mono animate-in fade-in slide-in-from-top-4 duration-700">
+              Multi-Modal AI · Real APIs · Enterprise Grade
            </Badge>
-           
-           <h1 className="text-5xl md:text-8xl font-[900] tracking-tighter text-foreground leading-[0.88] uppercase animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
-             Cyber Threats Don’t Work in Silos. <br />
-             <span className="text-accent relative inline-block">
-               Neither Should
-               <span className="absolute -bottom-2 left-0 w-full h-2 bg-accent/10 rounded-full blur-sm" />
-             </span> Your Defense.
+
+           <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-slate-100 leading-[0.92] uppercase font-mono animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
+             Cyber Threats Don&apos;t Work in Silos.<br />
+             <span className="text-blue-400">Neither Should</span>{" "}
+             <span className="text-amber-400">Your Defense.</span>
            </h1>
            
            <p className="text-lg md:text-xl text-muted-foreground/80 max-w-2xl leading-relaxed font-medium transition-all hover:text-muted-foreground animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-300">
@@ -38,13 +37,13 @@ export function LandingHero() {
         {/* 🎬 Primary CTAs */}
         <div className="flex flex-wrap items-center justify-center gap-6 pt-4 animate-in fade-in zoom-in-95 duration-1000 delay-500">
            <Link href="/dashboard/analyze">
-              <Button size="lg" className="rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 accent-glow px-12 py-8 text-xs font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-90 shadow-2xl shadow-accent/20">
+              <Button size="lg" className="rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-10 py-6 text-xs font-bold uppercase tracking-widest transition-all hover:scale-105 shadow-xl shadow-blue-500/20 font-mono glow-primary">
                  Analyze a Threat
-                 <ArrowRight className="ml-3 h-5 w-5" />
+                 <ArrowRight className="ml-2.5 h-4 w-4" />
               </Button>
            </Link>
            <Link href="/dashboard">
-              <Button size="lg" variant="outline" className="rounded-2xl border-white/10 cyber-border hover:bg-white/5 px-12 py-8 text-xs font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-90 shadow-xl shadow-black/80">
+              <Button size="lg" variant="outline" className="rounded-xl border-blue-500/20 hover:border-blue-500/40 hover:bg-blue-500/5 text-slate-300 px-10 py-6 text-xs font-bold uppercase tracking-widest transition-all font-mono">
                  View Dashboard
               </Button>
            </Link>

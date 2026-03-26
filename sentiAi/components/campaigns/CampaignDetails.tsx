@@ -1,11 +1,12 @@
 "use client"
 
-import React from "react"
-import { ShieldAlert, ShieldCheck, Globe, MessageSquare, Activity, User, Target, Share2, Printer, MoreVertical, PlusCircle, Trash2, Edit2, Zap, LayoutDashboard, Globe2, Link2, Monitor, Users, AlertTriangle, TrendingUp } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import React, { useEffect, useState } from "react"
+import { Target, Share2, Printer, Globe2, Link2, Monitor, Users, AlertTriangle, ShieldCheck, TrendingUp, Edit2 } from "lucide-react"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ActionPanel } from "./ActionPanel"
+import { getCampaignDetail } from "@/lib/api"
+import type { Campaign } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 interface CampaignDetailsProps {
@@ -17,95 +18,132 @@ interface CampaignDetailsProps {
   time: string
 }
 
+const VELOCITY_BARS = [42, 58, 23, 85, 91, 14, 66, 30, 77, 45, 12, 89, 54, 38, 71, 95, 23, 67, 41, 88, 55, 33, 76, 49, 10, 82, 36, 68, 92, 44, 18, 75, 59, 31, 87, 62, 28, 98, 51, 15, 74, 40, 60, 22, 90, 48, 35, 79]
+
 export function CampaignDetails({ id, type, risk, status, actor, time }: CampaignDetailsProps) {
-  const indicators = ["auth-login.net", "192.168.45.21", "secure-pay.ua", "cloud-verify.io", "v-log.ru"]
-  
+  const [campaign, setCampaign] = useState<Campaign | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    getCampaignDetail(id)
+      .then(data => { setCampaign(data); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [id])
+
+  // Merge live IOC data with prop fallbacks
+  const iocs: string[] = campaign
+    ? [...(campaign.iocs?.domains || []), ...(campaign.iocs?.ips || [])].slice(0, 8)
+    : ["auth-login.net", "192.168.45.21", "secure-pay.ua", "cloud-verify.io", "v-log.ru"]
+
+  const iocCount = campaign?.ioc_count ?? iocs.length
+  const techniques = campaign?.techniques || []
+  const targets = campaign?.targets || []
+
+  const statusColor = status === "Active" ? "bg-red-500/10 text-red-400 border-red-500/20 animate-pulse"
+    : status === "Investigating" ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+    : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+
+  const riskColor = risk === "HIGH" ? "text-red-400" : risk === "MEDIUM" ? "text-amber-400" : "text-emerald-400"
+
   return (
-    <div className="flex flex-col space-y-8 animate-in fade-in slide-in-from-right-12 duration-1000">
-       {/* 🧩 CAMPAIGN OVERVIEW */}
-       <Card className="card-cyber overflow-hidden group">
-          <CardHeader className="p-8 border-b border-white/5 bg-accent/5 backdrop-blur-md flex flex-row items-center justify-between">
-             <div className="flex items-center space-x-6">
-                <div className="h-16 w-16 rounded-2xl bg-accent text-accent-foreground flex items-center justify-center shadow-2xl accent-glow border-2 border-white/10 transition-transform group-hover:scale-105">
-                   <Target className="h-10 w-10" />
+    <div className="flex flex-col space-y-6 animate-in fade-in slide-in-from-right-8 duration-700">
+       {/* Campaign Overview */}
+       <Card className="card-cyber overflow-hidden">
+          <CardHeader className="p-6 border-b border-white/5 bg-blue-500/3 flex flex-row items-center justify-between">
+             <div className="flex items-center gap-5">
+                <div className="h-14 w-14 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shadow-xl shadow-blue-500/10">
+                   <Target className="h-7 w-7 text-blue-400" />
                 </div>
                 <div className="space-y-1">
-                   <div className="flex items-center space-x-3">
-                      <h2 className="text-3xl font-black tracking-tighter text-foreground uppercase">{id} <span className="text-accent underline decoration-accent/10 underline-offset-8">DETAILS</span></h2>
-                      <Badge className={cn(
-                        "text-[10px] h-6 rounded-lg px-3 uppercase font-black tracking-widest",
-                        status === "Active" ? "bg-destructive text-destructive-foreground animate-pulse" : "bg-accent text-accent-foreground"
-                      )}>{status}</Badge>
+                   <div className="flex items-center gap-3">
+                      <h2 className="text-2xl font-black tracking-tighter text-foreground uppercase">{id}</h2>
+                      <Badge className={cn("text-[9px] h-5 rounded-lg px-2.5 uppercase font-bold tracking-widest border", statusColor)}>
+                        {status}
+                      </Badge>
+                      <Badge className={cn("text-[9px] h-5 rounded-lg px-2.5 uppercase font-bold tracking-widest border border-white/10 bg-transparent", riskColor)}>
+                        {risk} risk
+                      </Badge>
                    </div>
-                   <p className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.4em]">Origin: {actor} <span className="mx-2 text-white/10">|</span> Detection Delta: 1.2s</p>
+                   <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest font-mono">
+                     Actor: <span className="text-slate-400">{actor}</span>
+                     <span className="mx-2 text-white/10">|</span>
+                     Last Activity: <span className="text-slate-400">{time}</span>
+                   </p>
                 </div>
              </div>
-             <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-accent hover:bg-accent/10 rounded-xl">
-                   <Share2 className="h-5 w-5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-accent hover:bg-accent/10 rounded-xl">
-                   <Printer className="h-5 w-5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-accent hover:bg-accent/10 rounded-xl">
-                   <Edit2 className="h-5 w-5" />
-                </Button>
+             <div className="flex items-center gap-1.5">
+                {[Share2, Printer, Edit2].map((Icon, i) => (
+                  <button key={i} className="h-8 w-8 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all flex items-center justify-center">
+                     <Icon className="h-4 w-4" />
+                  </button>
+                ))}
              </div>
           </CardHeader>
-          
-          <CardContent className="p-8 space-y-12">
-             <div className="grid grid-cols-4 gap-6">
+
+          <CardContent className="p-6 space-y-6">
+             {/* Stats row */}
+             <div className="grid grid-cols-4 gap-3">
                 {[
-                  { label: "Target Depts", value: "8 Active", icon: Monitor, color: "text-foreground" },
-                  { label: "Users Affected", value: "248 Nodes", icon: Users, color: "text-foreground" },
-                  { label: "Detected Tactics", value: "14 Flags", icon: AlertTriangle, color: "text-destructive" },
-                  { label: "Inference Conf.", value: "98.9%", icon: ShieldCheck, color: "text-accent" },
+                  { label: "Target Sectors", value: targets.length > 0 ? `${targets.length} Sectors` : "8 Active", icon: Monitor, color: "text-slate-200" },
+                  { label: "IOC Count", value: `${iocCount} Flags`, icon: AlertTriangle, color: "text-red-400" },
+                  { label: "Techniques", value: `${techniques.length > 0 ? techniques.length : 14} Mapped`, icon: TrendingUp, color: "text-amber-400" },
+                  { label: "Confidence", value: "98.9%", icon: ShieldCheck, color: "text-emerald-400" },
                 ].map((stat, i) => (
-                  <div key={i} className="p-4 rounded-xl bg-[#0D1B2A]/60 border border-white/5 hover:border-accent/30 transition-all cursor-pointer group/stat">
-                     <div className="flex items-center text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-2 group-hover/stat:text-accent transition-colors">
-                        <stat.icon className="h-3 w-3 mr-2" />
+                  <div key={i} className="p-3 rounded-xl bg-white/3 border border-white/5 hover:border-blue-500/20 transition-all">
+                     <div className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-widest text-slate-600 mb-1.5">
+                        <stat.icon className="h-2.5 w-2.5" />
                         {stat.label}
                      </div>
-                     <h3 className={cn("text-xl font-black tracking-tighter", stat.color)}>{stat.value}</h3>
+                     <p className={cn("text-lg font-black tracking-tighter font-mono", stat.color)}>
+                       {loading ? "--" : stat.value}
+                     </p>
                   </div>
                 ))}
              </div>
 
-             <div className="grid grid-cols-2 gap-12 pt-4">
-                <div className="space-y-6">
-                   <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-accent flex items-center">
-                         <Globe2 className="h-4 w-4 mr-2" />
+             <div className="grid grid-cols-2 gap-6">
+                {/* IOCs */}
+                <div className="space-y-3">
+                   <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-400 flex items-center gap-2">
+                         <Globe2 className="h-3.5 w-3.5" />
                          Related Indicators
                       </h4>
-                      <Badge variant="ghost" className="text-[9px] font-bold text-muted-foreground">IOCs Found: 14</Badge>
+                      <span className="text-[8px] text-slate-600 font-mono">IOCs: {iocCount}</span>
                    </div>
-                   <div className="flex flex-wrap gap-2">
-                      {indicators.map((tag, i) => (
-                        <div key={i} className="flex items-center px-4 py-2 bg-white/5 border border-white/5 rounded-xl hover:bg-destructive/10 hover:border-destructive/30 cursor-pointer transition-all group/tag">
-                           <Link2 className="h-3.5 w-3.5 text-muted-foreground mr-3 group-hover/tag:text-destructive transition-colors rotate-45" />
-                           <span className="text-[10px] font-bold text-foreground group-hover/tag:text-destructive transition-colors">{tag}</span>
-                        </div>
-                      ))}
+                   <div className="flex flex-wrap gap-1.5">
+                      {loading
+                        ? Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="h-7 w-24 bg-white/5 rounded-lg animate-pulse" />
+                          ))
+                        : iocs.map((ioc, i) => (
+                          <div key={i} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/3 border border-white/5 rounded-lg hover:border-red-500/20 cursor-pointer transition-all group/tag">
+                             <Link2 className="h-2.5 w-2.5 text-slate-600 group-hover/tag:text-red-400 transition-colors rotate-45" />
+                             <span className="text-[9px] font-mono text-slate-400 group-hover/tag:text-red-400 transition-colors">{ioc}</span>
+                          </div>
+                        ))
+                      }
                    </div>
                 </div>
 
-                <div className="space-y-6">
-                   <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-accent flex items-center">
-                         <TrendingUp className="h-4 w-4 mr-2" />
+                {/* Attack Velocity */}
+                <div className="space-y-3">
+                   <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-400 flex items-center gap-2">
+                         <TrendingUp className="h-3.5 w-3.5" />
                          Attack Velocity
                       </h4>
-                      <Badge variant="ghost" className="text-[8px] font-black uppercase tracking-widest text-destructive animate-pulse">+128% Trend</Badge>
+                      <Badge className="bg-red-500/10 text-red-400 border-none text-[7px] font-bold uppercase animate-pulse">+128% Trend</Badge>
                    </div>
-                   
-                   <div className="h-32 w-full flex items-end justify-between space-x-1.5 pt-4">
-                      {[42, 58, 23, 85, 91, 14, 66, 30, 77, 45, 12, 89, 54, 38, 71, 95, 23, 67, 41, 88, 55, 33, 76, 49, 10, 82, 36, 68, 92, 44, 18, 75, 59, 31, 87, 62, 28, 98, 51, 15, 74, 40, 60, 22, 90, 48, 35, 79].map((h, i) => (
-                        <div 
-                          key={i} 
+
+                   <div className="h-28 w-full flex items-end justify-between gap-0.5">
+                      {VELOCITY_BARS.map((h, i) => (
+                        <div
+                          key={i}
                           className={cn(
-                            "flex-1 rounded-sm transition-all duration-700 hover:scale-y-125 hover:bg-destructive",
-                            i > 30 && i < 40 ? "bg-destructive/40" : "bg-white/5"
+                            "flex-1 rounded-sm transition-all duration-500 hover:scale-y-125",
+                            i > 30 && i < 40 ? "bg-red-500/40 hover:bg-red-500/60" : "bg-white/5 hover:bg-blue-500/20"
                           )}
                           style={{ height: `${h}%` }}
                         />
@@ -113,6 +151,20 @@ export function CampaignDetails({ id, type, risk, status, actor, time }: Campaig
                    </div>
                 </div>
              </div>
+
+             {/* Techniques */}
+             {techniques.length > 0 && (
+               <div className="pt-2 border-t border-white/5 space-y-2">
+                  <h4 className="text-[9px] font-bold uppercase tracking-widest text-slate-500">MITRE Techniques</h4>
+                  <div className="flex flex-wrap gap-1.5">
+                     {techniques.slice(0, 8).map((t, i) => (
+                       <Badge key={i} variant="outline" className="text-[8px] border-white/10 text-slate-400 font-mono uppercase">
+                         {t}
+                       </Badge>
+                     ))}
+                  </div>
+               </div>
+             )}
           </CardContent>
        </Card>
 

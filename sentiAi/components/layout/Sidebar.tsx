@@ -3,21 +3,15 @@
 import React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { 
-  LayoutDashboard, 
-  Search, 
-  ShieldCheck, 
-  Target, 
-  MessageSquare, 
-  Settings, 
-  User,
+import {
+  LayoutDashboard,
+  Search,
+  ShieldCheck,
+  Target,
+  MessageSquare,
   LogOut,
-  ChevronRight,
-  TrendingUp,
-  Activity
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
 const menuItems = [
@@ -25,7 +19,7 @@ const menuItems = [
   { name: "Analyze", icon: Search, href: "/dashboard/analyze" },
   { name: "Intelligence", icon: ShieldCheck, href: "/dashboard/intelligence" },
   { name: "Campaigns", icon: Target, href: "/dashboard/campaigns" },
-  { name: "Chat", icon: MessageSquare, href: "/dashboard/chat", badge: "2" },
+  { name: "Chat", icon: MessageSquare, href: "/dashboard/chat", badge: "AI" },
 ]
 
 interface SidebarProps {
@@ -37,77 +31,67 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
 
   return (
     <div className={cn(
-      "h-full flex flex-col bg-[#070D14] transition-all duration-500",
-      collapsed ? "p-3 px-2" : "p-4"
+      "h-full flex flex-col bg-[#0d1117] border-r border-blue-500/10 transition-all duration-300",
+      collapsed ? "px-2 py-4" : "px-3 py-4"
     )}>
-      {/* Brand Identity / Logo */}
+      {/* Logo */}
       <div className={cn(
-        "flex items-center gap-4 px-2 py-8 transition-all duration-500",
-        collapsed ? "justify-center" : "px-3"
+        "flex items-center gap-3 mb-8 px-2",
+        collapsed && "justify-center"
       )}>
-        <div className="h-10 w-10 shrink-0 bg-accent/20 rounded-xl flex items-center justify-center border border-accent/30 shadow-[0_0_15px_rgba(0,201,167,0.2)]">
-          <ShieldCheck className="h-6 w-6 text-accent" />
+        <div className="h-9 w-9 shrink-0 bg-blue-500/15 rounded-xl flex items-center justify-center border border-blue-500/25 shadow-lg shadow-blue-500/10">
+          <ShieldCheck className="h-5 w-5 text-blue-400" />
         </div>
         {!collapsed && (
-          <div className="animate-in fade-in slide-in-from-left-2 duration-700">
-            <h1 className="text-xl font-black tracking-tighter text-foreground uppercase">SentinelAI</h1>
-            <p className="text-[10px] text-accent font-black tracking-[0.2em] -mt-1 uppercase opacity-80">Fusion v2.0</p>
+          <div>
+            <h1 className="text-sm font-bold tracking-tight text-slate-200 uppercase font-mono">SentinelAI</h1>
+            <p className="text-[9px] text-blue-400 font-mono uppercase tracking-widest leading-none mt-0.5">Fusion v2.0</p>
           </div>
         )}
       </div>
 
-      {/* Navigation Layer */}
-      <nav className="flex-1 mt-6 space-y-2">
+      {/* Nav */}
+      <nav className="flex-1 space-y-1">
         {!collapsed && (
-          <p className="text-[9px] font-black tracking-[0.4em] uppercase text-muted-foreground/50 px-3 mb-6 animate-in fade-in duration-1000">Core Network</p>
+          <p className="text-[8px] font-bold tracking-[0.4em] uppercase text-slate-600 px-2 mb-4">Navigation</p>
         )}
-        
+
         {menuItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))
-          
+
           return (
             <Link key={item.name} href={item.href}>
-              <div
-                className={cn(
-                  "flex items-center justify-between px-3 py-3 rounded-xl transition-all duration-300 group cursor-pointer relative",
-                  isActive 
-                    ? "bg-accent/10 border border-accent/20 text-accent" 
-                    : "hover:bg-white/5 border border-transparent text-muted-foreground",
-                  collapsed && "justify-center px-0"
-                )}
-              >
-                <div className={cn("flex items-center", collapsed ? "justify-center" : "space-x-4")}>
-                  <div className={cn(
-                    "p-2 rounded-lg transition-all",
-                    isActive ? "text-accent bg-accent/10 shadow-[0_0_15px_rgba(0,201,167,0.2)]" : "group-hover:text-foreground"
-                  )}>
-                    <item.icon className={cn("transition-transform duration-300", !isActive && "group-hover:scale-110", collapsed ? "h-6 w-6" : "h-5 w-5")} />
-                  </div>
-                  
-                  {!collapsed && (
-                    <span className={cn(
-                      "font-bold text-sm tracking-tight transition-colors animate-in fade-in slide-in-from-left-2 duration-500",
-                      isActive ? "text-foreground" : "group-hover:text-foreground"
-                    )}>
-                      {item.name}
-                    </span>
-                  )}
-                </div>
-                
-                {/* Badge Overlay */}
-                {item.badge && (
-                  collapsed ? (
-                    <div className="absolute top-1 right-1 h-3 w-3 bg-destructive rounded-full border-2 border-[#070D14]" />
-                  ) : (
-                    <Badge className="bg-accent text-accent-foreground text-[10px] h-5 min-w-5 flex items-center justify-center rounded-full p-0 shadow-lg shadow-accent/20 animate-in zoom-in duration-700">
-                      {item.badge}
-                    </Badge>
-                  )
-                )}
-                
-                {/* Selection Indicator Bar */}
+              <div className={cn(
+                "flex items-center gap-3 px-2 py-2.5 rounded-lg transition-all duration-200 group relative",
+                isActive
+                  ? "bg-blue-500/15 text-blue-400 border border-blue-500/20"
+                  : "text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent",
+                collapsed && "justify-center"
+              )}>
+                {/* Active indicator */}
                 {isActive && !collapsed && (
-                   <div className="h-5 w-1 bg-accent rounded-full absolute -left-1 shadow-[0_0_10px_#00C9A7]" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-400 rounded-full shadow-[0_0_8px_#3b82f6]" />
+                )}
+
+                <item.icon className={cn(
+                  "shrink-0 transition-all duration-200",
+                  collapsed ? "h-5 w-5" : "h-4 w-4",
+                  isActive ? "text-blue-400" : "group-hover:text-slate-300"
+                )} />
+
+                {!collapsed && (
+                  <span className={cn(
+                    "text-[11px] font-bold uppercase tracking-wide flex-1",
+                    isActive ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300"
+                  )}>
+                    {item.name}
+                  </span>
+                )}
+
+                {item.badge && !collapsed && (
+                  <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/20 text-[8px] h-4 px-1.5 uppercase font-mono">
+                    {item.badge}
+                  </Badge>
                 )}
               </div>
             </Link>
@@ -115,42 +99,26 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
         })}
       </nav>
 
-      {/* User Session Interface */}
-      <div className="mt-auto space-y-6">
-        <div className="h-px bg-white/5 w-full mx-auto" />
-        
-        {/* User Persona */}
+      {/* User */}
+      <div className="mt-auto space-y-3">
+        <div className="h-px bg-white/5" />
         <div className={cn(
-          "bg-[#0D1B2A]/40 rounded-2xl border border-white/5 group transition-all duration-300 hover:bg-[#0D1B2A]/70 relative overflow-hidden",
-          collapsed ? "p-2" : "p-3"
+          "flex items-center gap-2.5 px-2 py-2 rounded-lg bg-white/3 border border-white/5 group transition-all hover:bg-white/5",
+          collapsed && "justify-center"
         )}>
-          <div className="flex items-center justify-between h-full">
-            <div className={cn("flex items-center", collapsed ? "justify-center w-full" : "space-x-3")}>
-               <div className="h-10 w-10 shrink-0 rounded-xl bg-gradient-to-tr from-accent to-secondary flex items-center justify-center border border-white/10 shadow-xl group-hover:scale-105 transition-transform">
-                 <span className="text-accent-foreground font-black text-xs">VA</span>
-               </div>
-               
-               {!collapsed && (
-                 <div className="flex-1 min-w-0 animate-in fade-in duration-700">
-                   <h4 className="text-sm font-black text-foreground truncate tracking-tight">Analyst 042</h4>
-                   <p className="text-[10px] text-accent/70 uppercase font-black tracking-[0.2em] leading-none mt-1">L3 Forensic</p>
-                 </div>
-               )}
-            </div>
-            
-            {!collapsed && (
-               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0 transition-colors">
-                 <LogOut className="h-4 w-4" />
-               </Button>
-            )}
+          <div className="h-7 w-7 shrink-0 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+            <span className="text-white font-bold text-[9px]">VA</span>
           </div>
+          {!collapsed && (
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-bold text-slate-300 uppercase tracking-tight">Analyst 042</div>
+              <div className="text-[9px] text-slate-500 uppercase font-mono">L3 Forensic</div>
+            </div>
+          )}
+          {!collapsed && (
+            <LogOut className="h-3.5 w-3.5 text-slate-600 hover:text-red-400 transition-colors cursor-pointer" />
+          )}
         </div>
-        
-        {collapsed && (
-           <Button variant="ghost" size="icon" className="h-10 w-10 mx-auto w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all">
-             <LogOut className="h-5 w-5" />
-           </Button>
-        )}
       </div>
     </div>
   )

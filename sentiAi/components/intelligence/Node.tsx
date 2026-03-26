@@ -25,10 +25,10 @@ const typeStyles = {
     icon: User
   },
   domain: {
-    bg: "bg-accent/10",
-    border: "border-accent/40",
-    text: "text-accent",
-    glow: "shadow-[0_0_15px_rgba(0,201,167,0.3)]",
+    bg: "bg-blue-500/10",
+    border: "border-blue-500/40",
+    text: "text-blue-400",
+    glow: "shadow-[0_0_15px_rgba(59,130,246,0.3)]",
     icon: Globe
   },
   campaign: {
@@ -77,7 +77,7 @@ export function Node({ label, type, x, y, active, onClick }: NodeProps) {
         <div className="absolute top-full mt-3 flex flex-col items-center">
            <span className={cn(
              "text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap px-2 py-0.5 rounded border border-transparent transition-all",
-             active ? "bg-foreground text-background" : "text-foreground group-hover:text-accent group-hover:bg-white/5"
+             active ? "bg-foreground text-background" : "text-foreground group-hover:text-blue-400 group-hover:bg-white/5"
            )}>
              {label}
            </span>

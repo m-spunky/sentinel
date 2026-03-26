@@ -1,65 +1,72 @@
 import React from "react"
-import { Monitor, MessageSquare, ShieldCheck, Printer, Share2, MoreVertical, Search, Zap } from "lucide-react"
+import { MessageSquare, Zap, ShieldCheck } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
 
 interface ExplanationCardProps {
   explanation: string
+  loading?: boolean
 }
 
-export function ExplanationCard({ explanation }: ExplanationCardProps) {
+export function ExplanationCard({ explanation, loading }: ExplanationCardProps) {
   return (
-    <Card className="card-cyber h-full flex flex-col p-8 bg-cyber-gradient relative overflow-hidden">
-      {/* Visual Accent */}
-      <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-         <MessageSquare className="h-24 w-24" />
+    <Card className="card-cyber h-full flex flex-col overflow-hidden relative">
+      <div className="absolute top-0 right-0 p-8 opacity-5">
+         <MessageSquare className="h-24 w-24 text-blue-400" />
       </div>
-      
-      <CardHeader className="p-0 border-b border-white/5 space-y-2 flex flex-row items-center justify-between mb-8">
+
+      <CardHeader className="p-5 border-b border-white/5 flex flex-row items-center justify-between">
         <div className="space-y-1">
-          <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-foreground flex items-center group-hover:text-accent transition-colors">
-            <Zap className="h-4 w-4 mr-2" />
-            AI Logic Explanation
+          <CardTitle className="text-xs font-bold uppercase tracking-widest text-slate-300 flex items-center gap-2">
+            <Zap className="h-3.5 w-3.5 text-amber-400" />
+            AI Forensic Explanation
           </CardTitle>
-          <CardDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest leading-none mt-1">
-             LLM-powered reasoning and forensic summary
+          <CardDescription className="text-[10px] text-slate-500 uppercase tracking-widest">
+            LLM-powered reasoning & forensic summary
           </CardDescription>
         </div>
-        <div className="flex items-center space-x-2 translate-y-[-10px]">
-           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-accent hover:bg-accent/10 rounded-lg">
-              <Printer className="h-4 w-4" />
-           </Button>
-           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-accent hover:bg-accent/10 rounded-lg">
-              <MoreVertical className="h-4 w-4" />
-           </Button>
-        </div>
+        {loading && (
+          <div className="flex items-center gap-1.5 text-[9px] text-amber-400 font-mono uppercase">
+            <div className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+            Generating
+          </div>
+        )}
       </CardHeader>
-      
-      <CardContent className="p-0 space-y-8 flex-1 flex flex-col justify-center">
-         <div className="bg-[#0D1B2A]/60 border border-white/10 p-6 rounded-2xl relative group/content">
-            <div className="absolute -top-3 left-6">
-               <Badge className="bg-accent text-accent-foreground text-[8px] h-5 rounded-lg px-3 font-black uppercase tracking-widest border-2 border-[#1B263B] shadow-lg">Analyst Insight</Badge>
+
+      <CardContent className="p-5 flex-1 flex flex-col justify-center space-y-5 relative z-10">
+         <div className="bg-[#0D1B2A]/60 border border-white/10 p-5 rounded-xl relative">
+            <div className="absolute -top-3 left-4">
+               <Badge className="bg-blue-600 text-white text-[8px] h-5 rounded-md px-2.5 font-bold uppercase tracking-widest border border-blue-500/30 shadow-lg">
+                 Analyst Insight
+               </Badge>
             </div>
-            
-            <p className="text-sm md:text-base text-foreground leading-[1.8] font-medium tracking-tight opacity-90 first-letter:text-3xl first-letter:font-black first-letter:text-accent first-letter:mr-2 first-letter:float-left">
-               {explanation}
-            </p>
+
+            {loading ? (
+              <div className="space-y-2 pt-2">
+                {[100, 90, 75, 60].map((w, i) => (
+                  <div key={i} className="h-3 bg-white/5 rounded animate-pulse" style={{ width: `${w}%` }} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-300 leading-relaxed font-medium tracking-tight pt-2
+                first-letter:text-2xl first-letter:font-black first-letter:text-blue-400 first-letter:mr-1 first-letter:float-left">
+                 {explanation}
+              </p>
+            )}
          </div>
-         
-         <div className="pt-8 border-t border-white/5">
-            <div className="bg-accent/5 p-4 rounded-xl border border-accent/10 flex items-center justify-between group/action cursor-pointer hover:bg-accent/10 transition-colors">
-               <div className="flex items-center space-x-3">
-                  <div className="h-10 w-10 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shadow-xl accent-glow border-2 border-[#1B263B]">
-                     <ShieldCheck className="h-6 w-6" />
+
+         <div className="border-t border-white/5 pt-4">
+            <div className="bg-blue-500/5 p-3.5 rounded-xl border border-blue-500/10 flex items-center justify-between">
+               <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+                     <ShieldCheck className="h-4 w-4 text-blue-400" />
                   </div>
                   <div>
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Confidence Certified</h4>
-                    <p className="text-[8px] text-muted-foreground uppercase font-black tracking-widest mt-0.5 italic lowercase">98.9% Signature Match</p>
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-400">Confidence Certified</h4>
+                    <p className="text-[8px] text-slate-500 uppercase font-bold tracking-widest mt-0.5">98.9% Signature Match</p>
                   </div>
                </div>
-               <Button size="sm" className="rounded-xl bg-accent text-accent-foreground font-black text-[10px] uppercase tracking-widest hover:bg-accent/90 transition-all opacity-0 group-hover/action:opacity-100 translate-x-4 group-hover/action:translate-x-0">Generate Full Report</Button>
+               <div className="text-[9px] text-slate-500 font-mono">GPT-4o-mini</div>
             </div>
          </div>
       </CardContent>

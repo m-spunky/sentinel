@@ -33,7 +33,7 @@ interface HeaderProps {
 
 export function Header({ sidebarCollapsed, setSidebarCollapsed }: HeaderProps) {
   return (
-    <header className="h-20 w-full flex items-center justify-between px-4 md:px-8 bg-[#0D1B2A]/20 backdrop-blur-sm border-b border-[#00C9A7]/5 relative z-40">
+    <header className="h-14 w-full flex items-center justify-between px-4 md:px-6 bg-[#0d1117]/80 backdrop-blur-sm border-b border-blue-500/8 relative z-40">
       <div className="flex items-center space-x-4">
         {/* 📱 Mobile Menu Trigger - SHADCN SHEET */}
         <Sheet>
@@ -42,7 +42,7 @@ export function Header({ sidebarCollapsed, setSidebarCollapsed }: HeaderProps) {
                <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 border-r border-[#00C9A7]/10 w-72 bg-[#070D14] shadow-2xl">
+          <SheetContent side="left" className="p-0 border-r border-blue-500/10 w-60 bg-[#0d1117] shadow-2xl">
              <Sidebar />
           </SheetContent>
         </Sheet>
@@ -58,14 +58,14 @@ export function Header({ sidebarCollapsed, setSidebarCollapsed }: HeaderProps) {
         </Button>
         
         <div className="flex flex-col">
-          <h2 className="text-sm md:text-2xl font-black tracking-tight text-foreground leading-none mb-1">
-             Good Evening, <span className="text-accent underline decoration-accent/10 underline-offset-4">Analyst</span>
+          <h2 className="text-sm font-bold tracking-tight text-slate-300 leading-none mb-1 font-mono">
+            SentinelAI <span className="text-blue-400">Fusion</span>
           </h2>
-          <div className="flex items-center space-x-2">
-             <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
-             <p className="text-[8px] md:text-[10px] text-muted-foreground uppercase font-black tracking-[0.2em] truncate max-w-[120px] md:max-w-none">
-                Real-time threat monitoring <span className="text-accent/60 italic lowercase font-normal">ongoing...</span>
-             </p>
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <p className="text-[9px] text-slate-500 uppercase font-mono tracking-widest">
+              All systems operational
+            </p>
           </div>
         </div>
       </div>
@@ -93,7 +93,7 @@ export function Header({ sidebarCollapsed, setSidebarCollapsed }: HeaderProps) {
                 </Badge>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[85vw] md:w-80 bg-[#0D1B2A] border-[#00C9A7]/20 rounded-2xl p-2 shadow-2xl backdrop-blur-xl">
+            <DropdownMenuContent align="end" className="w-[85vw] md:w-80 bg-[#0D1B2A] border-blue-500/20 rounded-2xl p-2 shadow-2xl backdrop-blur-xl">
                <div className="p-3 border-b border-white/5 mb-2">
                  <h4 className="text-xs font-black uppercase tracking-widest text-accent">Real-time Alerts</h4>
                </div>

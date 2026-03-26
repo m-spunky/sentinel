@@ -1,13 +1,11 @@
 "use client"
 
 import React, { useState } from "react"
-import { Search, Filter, History, Trash2, Zap, LayoutList, PlusCircle, Target } from "lucide-react"
+import { Search, LayoutList, Target, PlusCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { CampaignItem, CampaignStatus, RiskLevel } from "./CampaignItem"
-import { cn } from "@/lib/utils"
 
 interface Campaign {
   id: string
@@ -26,63 +24,66 @@ interface CampaignListProps {
 
 export function CampaignList({ items, activeId, onSelect }: CampaignListProps) {
   const [searchTerm, setSearchTerm] = useState("")
-  
-  const filtered = items.filter(item => 
-    item.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    item.actor.toLowerCase().includes(searchTerm.toLowerCase())
+
+  const filtered = items.filter(item =>
+    item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.actor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.type.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
-    <Card className="card-cyber overflow-hidden flex flex-col h-full group">
-       <CardHeader className="p-6 border-b border-white/5 bg-accent/5 flex flex-row items-center justify-between">
+    <Card className="card-cyber overflow-hidden flex flex-col h-full">
+       <CardHeader className="p-5 border-b border-white/5 flex flex-row items-center justify-between">
           <div className="space-y-1">
-             <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-foreground flex items-center">
-                <LayoutList className="h-4 w-4 mr-2 text-accent" />
+             <CardTitle className="text-xs font-bold uppercase tracking-widest text-slate-300 flex items-center gap-2">
+                <LayoutList className="h-3.5 w-3.5 text-blue-400" />
                 Active Campaigns
              </CardTitle>
-             <CardDescription className="text-[10px] text-muted-foreground uppercase font-black tracking-widest leading-none mt-1">
+             <CardDescription className="text-[10px] text-slate-500 uppercase tracking-widest">
                 Operation Intelligence Feed
              </CardDescription>
           </div>
-          <Badge className="bg-destructive/10 text-destructive border border-destructive/20 text-[8px] h-5 rounded-full px-2 uppercase font-black tracking-widest bg-destructive/5 animate-pulse">8 Live</Badge>
+          <Badge className="bg-red-500/10 text-red-400 border border-red-500/20 text-[8px] h-5 rounded-full px-2 uppercase font-bold tracking-widest animate-pulse">
+            {items.length} Live
+          </Badge>
        </CardHeader>
-       
-       <CardContent className="p-4 space-y-4 flex-1 flex flex-col">
-          <div className="relative group/search mb-2">
-             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within/search:text-accent transition-colors" />
-             <Input 
+
+       <CardContent className="p-4 space-y-4 flex-1 flex flex-col overflow-hidden">
+          <div className="relative">
+             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-600" />
+             <Input
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Search Campaigns..." 
-                className="bg-[#0D1B2A]/60 border-white/5 focus:border-accent/40 rounded-xl pl-9 text-xs font-bold transition-all focus:ring-accent/20 h-10 placeholder:text-muted-foreground/30"
+                placeholder="Search campaigns..."
+                className="bg-[#0D1B2A]/60 border-white/5 focus:border-blue-500/40 rounded-xl pl-9 text-xs font-bold h-9 placeholder:text-slate-700"
              />
           </div>
-          
-          <div className="flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-thin scrollbar-thumb-accent/20 scrollbar-track-transparent">
+
+          <div className="flex-1 overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
              {filtered.map((campaign) => (
-               <CampaignItem 
-                  key={campaign.id} 
-                  {...campaign} 
+               <CampaignItem
+                  key={campaign.id}
+                  {...campaign}
                   active={activeId === campaign.id}
-                  onClick={() => onSelect(campaign.id)} 
+                  onClick={() => onSelect(campaign.id)}
                />
              ))}
-             
+
              {filtered.length === 0 && (
                <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-40 py-20">
                   <div className="h-10 w-10 border-2 border-dashed border-white/20 rounded-full flex items-center justify-center">
-                     <Target className="h-5 w-5 text-muted-foreground" />
+                     <Target className="h-5 w-5 text-slate-500" />
                   </div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">No Campaigns Found</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">No Campaigns Found</p>
                </div>
              )}
           </div>
-          
-          <div className="pt-4 border-t border-white/5 flex flex-col space-y-3">
-             <Button variant="ghost" className="w-full h-12 bg-accent/5 border border-accent/10 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-accent hover:bg-accent/10 transition-all hover:scale-105 active:scale-95 group">
-                <PlusCircle className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform" />
+
+          <div className="pt-3 border-t border-white/5">
+             <button className="w-full h-10 bg-blue-500/5 border border-blue-500/10 rounded-xl text-[10px] font-bold uppercase tracking-widest text-blue-400 hover:bg-blue-500/10 transition-all flex items-center justify-center gap-2">
+                <PlusCircle className="h-3.5 w-3.5" />
                 Initialize Operation
-             </Button>
+             </button>
           </div>
        </CardContent>
     </Card>

@@ -13,22 +13,22 @@ export default function DashboardLayout({
   const [collapsed, setCollapsed] = useState(false)
 
   return (
-    <div className="flex h-screen w-screen bg-black text-[#E0E1DD] overflow-hidden">
-      {/* 🖥️ Desktop Sidebar (Collapsible) */}
-      <div 
+    <div className="flex h-screen w-screen bg-[#0a0e1a] text-slate-200 overflow-hidden">
+      {/* Desktop Sidebar */}
+      <div
         className={cn(
-          "hidden lg:block h-full transition-all duration-500 ease-in-out border-r border-[#00C9A7]/10 bg-[#070D14] relative z-50",
-          collapsed ? "w-20" : "w-72"
+          "hidden lg:block h-full transition-all duration-300 ease-in-out relative z-50",
+          collapsed ? "w-16" : "w-60"
         )}
       >
         <Sidebar collapsed={collapsed} />
       </div>
-      
-      {/* Platform Content Stack */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-black relative">
-        {/* Ambient Page Glows */}
-        <div className="absolute top-0 right-0 h-[40vh] w-[40vw] bg-accent/5 rounded-full blur-[120px] pointer-events-none opacity-50 transition-opacity" />
-        <div className="absolute bottom-0 left-0 h-[30vh] w-[30vw] bg-accent/3 rounded-full blur-[100px] pointer-events-none opacity-40 transition-opacity" />
+
+      {/* Content */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#0a0e1a] relative">
+        {/* Ambient glows */}
+        <div className="absolute top-0 right-0 h-[35vh] w-[35vw] bg-blue-500/4 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-0 left-0 h-[25vh] w-[25vw] bg-amber-500/3 rounded-full blur-[100px] pointer-events-none" />
         
         {/* Global Toolbar */}
         <Header 

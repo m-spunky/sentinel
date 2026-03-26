@@ -10,7 +10,7 @@ import { LandingFooter } from "@/components/landing/LandingFooter";
 
 export default function Home() {
   return (
-    <div className="flex flex-col w-full bg-black overflow-x-hidden">
+    <div className="flex flex-col w-full bg-[#0a0e1a] overflow-x-hidden">
       <Navbar />
       
       <main className="flex-grow">

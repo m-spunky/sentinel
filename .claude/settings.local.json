@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python -c \"from models.nlp_engine import analyze_text; from models.url_analyzer import score_url; from models.header_analyzer import analyze_headers; from models.fusion_engine import fuse_scores; from intelligence.knowledge_graph import get_graph; print\\(''All modules import OK''\\); g = get_graph\\(\\); print\\(f''Graph: {g.G.number_of_nodes\\(\\)} nodes, {g.G.number_of_edges\\(\\)} edges''\\)\")",
+      "Bash(python -c \"from main import app; print\\(''FastAPI app loaded OK''\\)\")",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(npx --yes typescript tsc --noEmit)",
+      "Bash(\"./node_modules/.bin/tsc\" --noEmit)",
+      "Bash(npm run:*)",
+      "Bash(python -c \":*)",
+      "Bash(curl -s -X POST http://localhost:8000/api/v1/analyze/url -H \"Content-Type: application/json\" -d '{\"\"\"\"url\"\"\"\": \"\"\"\"https://auth-login.net/secure/verify-payment\"\"\"\"}')",
+      "Bash(netstat -ano)",
+      "Bash(tasklist)",
+      "Bash(taskkill /PID 2908 /F)",
+      "Bash(taskkill /PID 3228 /F)",
+      "Bash(taskkill /PID 2404 /F)",
+      "Bash(taskkill /PID 13348 /F)",
+      "Bash(taskkill /PID 2908 /F /T)",
+      "Bash(taskkill /PID 2404 /F /T 2)",
+      "Bash(/dev/null sleep:*)",
+      "Bash(/dev/null:*)",
+      "Bash(python3 -c \":*)",
+      "Bash(ls:*)"
+    ]
+  }
+}

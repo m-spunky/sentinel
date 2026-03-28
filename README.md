@@ -26,7 +26,6 @@ D:/Projects/Sentinel/
 ```bash
 cd backend
 pip install -r requirements.txt
-# Set ANTHROPIC_API_KEY in .env for SentinelChat
 python -m uvicorn main:app --port 8001 --reload
 ```
 

@@ -135,7 +135,7 @@ async def _run_full_analysis(content: str, input_type: str, options: dict = None
     }, 3)
 
     # ── LAYER 3: Visual Sandbox Analysis ─────────────────────────────────────
-    run_visual = options.get("run_visual", bool(primary_url))
+    run_visual = options.get("run_visual", False)  # default OFF — screenshot is slow (Apify)
     visual_result = {"score": 0.05, "confidence": 0.4, "matched_brand": "Unknown", "similarity": 0.05, "source": "skipped"}
     if primary_url and run_visual:
         try:
@@ -152,7 +152,7 @@ async def _run_full_analysis(content: str, input_type: str, options: dict = None
         "score": visual_result.get("score", 0),
         "matched_brand": visual_result.get("matched_brand", "Unknown"),
         "similarity": visual_result.get("similarity", 0),
-        "screenshot_url": visual_result.get("screenshot_url"),
+        "screenshot_path": visual_result.get("screenshot_path"),
     }, 4)
 
     # ── LAYER 4: Threat Intelligence + IOC Enrichment ─────────────────────────
@@ -202,7 +202,7 @@ async def _run_full_analysis(content: str, input_type: str, options: dict = None
 
     fusion["model_breakdown"]["visual"]["matched_brand"] = visual_result.get("matched_brand", "Unknown")
     fusion["model_breakdown"]["visual"]["similarity"] = visual_result.get("similarity", 0.0)
-    fusion["model_breakdown"]["visual"]["screenshot_url"] = visual_result.get("screenshot_url")
+    fusion["model_breakdown"]["visual"]["screenshot_path"] = visual_result.get("screenshot_path")
 
     # ── Threat intelligence summary ───────────────────────────────────────────
     threat_intel = {
@@ -305,7 +305,13 @@ async def analyze_email(request: EmailAnalysisRequest):
     """PS-01: Submit raw email content for full multi-modal phishing analysis."""
     if not request.content or len(request.content.strip()) < 10:
         raise HTTPException(status_code=400, detail="Email content required (minimum 10 characters).")
-    return await _run_full_analysis(request.content, "email", request.options)
+    try:
+        return await _run_full_analysis(request.content, "email", request.options)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[Analyze] Email analysis error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Analysis pipeline error: {str(e)}")
 
 
 @router.post("/analyze/url")
@@ -316,7 +322,13 @@ async def analyze_url_endpoint(request: URLAnalysisRequest):
         raise HTTPException(status_code=400, detail="URL is required.")
     if not url.startswith("http"):
         url = "https://" + url
-    return await _run_full_analysis(url, "url", request.options)
+    try:
+        return await _run_full_analysis(url, "url", request.options)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[Analyze] URL analysis error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Analysis pipeline error: {str(e)}")
 
 
 @router.post("/analyze/headers")
@@ -324,7 +336,13 @@ async def analyze_headers_endpoint(request: HeaderAnalysisRequest):
     """PS-01: Analyze raw email headers (SPF/DKIM/DMARC + routing forensics)."""
     if not request.headers or len(request.headers.strip()) < 20:
         raise HTTPException(status_code=400, detail="Email headers required.")
-    return await _run_full_analysis(request.headers, "email", request.options)
+    try:
+        return await _run_full_analysis(request.headers, "email", request.options)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[Analyze] Headers analysis error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Analysis pipeline error: {str(e)}")
 
 
 @router.post("/analyze/attachment")
@@ -461,12 +479,264 @@ def _extract_text_from_bytes(data: bytes, filename: str, mime_type: str) -> str:
     return text[:8000]  # Cap at 8KB for NLP
 
 
+@router.get("/debug/screenshot")
+async def debug_screenshot(url: str):
+    """
+    Debug endpoint — runs the Apify screenshot actor and returns full diagnostics.
+    Open http://localhost:8001/api/v1/debug/screenshot?url=https://google.com
+    """
+    import os, json as _json, base64 as _b64, traceback as _tb
+    import requests as _req
+    from config import APIFY_API_TOKEN
+    from apify_client import ApifyClient
+
+    log: list[str] = []
+
+    def L(msg: str):
+        log.append(msg)
+        logger.info(f"[SS-DEBUG] {msg}")
+
+    if not APIFY_API_TOKEN:
+        return {"success": False, "error": "APIFY_API_TOKEN not set", "log": log}
+
+    try:
+        client = ApifyClient(APIFY_API_TOKEN)
+
+        run_input = {
+            "fullPage": False,
+            "enableSSL": True,
+            "linkUrls": [url],
+            "outputFormat": "jpeg",
+            "waitUntil": "networkidle0",
+            "timeouT": 15,
+            "maxRetries": 3,
+            "delayBeforeScreenshot": 1500,
+            "infiniteScroll": False,
+            "timefullPagE": 10,
+            "frameCounT": 15,
+            "frameIntervaL": 10,
+            "frame": 10,
+            "scrollSteP": 300,
+            "printBackground": True,
+            "formaT": "A4",
+            "toP": 0, "righT": 0, "bottoM": 0, "lefT": 0,
+            "window_Width": 1920,
+            "window_Height": 1080,
+            "scrollToBottom": False,
+            "delayAfterScrolling": 300,
+            "cookies": [],
+            "proxyConfig": {"useApifyProxy": False},
+        }
+
+        L(f"Starting actor run for: {url}")
+        run = client.actor("FU5kPkREa2rdypuqb").call(run_input=run_input, timeout_secs=60)
+
+        if not run:
+            return {"success": False, "error": "Actor returned None", "log": log}
+
+        L(f"Run status={run.get('status')}, id={run.get('id')}")
+        L(f"datasetId={run.get('defaultDatasetId')}, kvStoreId={run.get('defaultKeyValueStoreId')}")
+
+        if run.get("status") != "SUCCEEDED":
+            return {"success": False, "error": f"Run status: {run.get('status')}", "run": run, "log": log}
+
+        # ── Inspect dataset ───────────────────────────────────────────────────
+        dataset_id = run.get("defaultDatasetId")
+        items = list(client.dataset(dataset_id).iterate_items()) if dataset_id else []
+        L(f"Dataset has {len(items)} item(s)")
+
+        dataset_dump = []
+        for idx, item in enumerate(items):
+            safe = {}
+            for k, v in item.items():
+                if isinstance(v, (bytes, bytearray)):
+                    safe[k] = f"<bytes len={len(v)} valid_image={str(v[:3]) if len(v) >= 3 else '?'}>"
+                elif isinstance(v, str) and len(v) > 200:
+                    safe[k] = v[:200] + f"... (total {len(v)} chars)"
+                else:
+                    safe[k] = v
+            dataset_dump.append(safe)
+            L(f"Item[{idx}]: {_json.dumps(safe, default=str)}")
+
+        # ── Inspect key-value store ───────────────────────────────────────────
+        kv_id = run.get("defaultKeyValueStoreId")
+        kv_dump = {}
+        if kv_id:
+            kv = client.key_value_store(kv_id)
+            for key in ("OUTPUT", "screenshot", "screenshot.jpg", "screenshot.jpeg", "screenshot.png"):
+                try:
+                    record = kv.get_record(key)
+                    if record:
+                        val = record.get("value")
+                        if isinstance(val, (bytes, bytearray)):
+                            kv_dump[key] = f"<bytes len={len(val)}, magic={val[:4].hex() if len(val)>=4 else '?'}>"
+                        elif isinstance(val, str):
+                            kv_dump[key] = val[:200]
+                        else:
+                            kv_dump[key] = str(val)[:200]
+                        L(f"KV['{key}']: {kv_dump[key]}")
+                    else:
+                        L(f"KV['{key}']: not found")
+                except Exception as ke:
+                    L(f"KV['{key}']: error — {ke}")
+
+        # ── Try to actually get an image ──────────────────────────────────────
+        img_bytes = None
+        img_source = None
+
+        for item in items:
+            for k, v in item.items():
+                if isinstance(v, (bytes, bytearray)) and len(v) > 500:
+                    if bytes(v[:3]) == b"\xff\xd8\xff" or bytes(v[:4]) == b"\x89PNG":
+                        img_bytes = bytes(v)
+                        img_source = f"item['{k}'] bytes"
+                        break
+                if isinstance(v, str) and v.startswith("data:image"):
+                    try:
+                        raw = _b64.b64decode(v.split(",", 1)[1])
+                        if raw[:3] == b"\xff\xd8\xff" or raw[:4] == b"\x89PNG":
+                            img_bytes = raw
+                            img_source = f"item['{k}'] base64"
+                            break
+                    except Exception:
+                        pass
+                if isinstance(v, str) and v.startswith("http"):
+                    try:
+                        r = _req.get(v, timeout=15, allow_redirects=True)
+                        L(f"Fetched item['{k}']={v[:80]} → HTTP {r.status_code} ct={r.headers.get('content-type','?')} size={len(r.content)}")
+                        if r.status_code == 200 and (r.content[:3] == b"\xff\xd8\xff" or r.content[:4] == b"\x89PNG"):
+                            img_bytes = r.content
+                            img_source = f"item['{k}'] url fetch"
+                            break
+                        else:
+                            # save whatever we got for inspection
+                            _dir = os.path.join(os.path.dirname(__file__), "..", "data", "screenshots")
+                            os.makedirs(_dir, exist_ok=True)
+                            with open(os.path.join(_dir, f"debug_raw_{k}.bin"), "wb") as f:
+                                f.write(r.content[:4096])
+                            L(f"Saved first 4KB of response to debug_raw_{k}.bin")
+                    except Exception as fe:
+                        L(f"Fetch error for item['{k}']: {fe}")
+            if img_bytes:
+                break
+
+        if not img_bytes:
+            return {
+                "success": False,
+                "error": "Could not extract valid image from run output",
+                "dataset_items": dataset_dump,
+                "kv_store": kv_dump,
+                "log": log,
+            }
+
+        # Save locally and return
+        _dir = os.path.join(os.path.dirname(__file__), "..", "data", "screenshots")
+        os.makedirs(_dir, exist_ok=True)
+        ext = "png" if img_bytes[:4] == b"\x89PNG" else "jpg"
+        import time as _t
+        fname = f"screenshot_{int(_t.time()*1000)}.{ext}"
+        fpath = os.path.join(_dir, fname)
+        with open(fpath, "wb") as f:
+            f.write(img_bytes)
+        L(f"Saved: {fpath} ({len(img_bytes)} bytes)")
+
+        mime = "image/png" if ext == "png" else "image/jpeg"
+        return {
+            "success": True,
+            "image_source": img_source,
+            "size_bytes": len(img_bytes),
+            "serve_url": f"http://localhost:8001/screenshots/{fname}",
+            "dataset_items": dataset_dump,
+            "kv_store": kv_dump,
+            "log": log,
+        }
+
+    except Exception as exc:
+        return {
+            "success": False,
+            "error": str(exc),
+            "traceback": _tb.format_exc(),
+            "log": log,
+        }
+
+
 @router.get("/events/{event_id}/result")
 async def get_event_result(event_id: str):
     """Get cached detection result by event ID."""
     if event_id in _result_cache:
         return _result_cache[event_id]
     raise HTTPException(status_code=404, detail=f"Event {event_id} not found. Results expire after 500 scans.")
+
+
+@router.get("/metrics")
+async def get_model_metrics():
+    """
+    Return real model evaluation metrics for the phishing detection engine.
+    XGBoost URL classifier + BERT phishing model — both evaluated on held-out benchmarks.
+    """
+    from models.ml_url_classifier import get_evaluation_metrics as xgb_metrics
+    from models.bert_phishing_model import get_evaluation_metrics as bert_metrics
+    from routers.dashboard import _analysis_counter
+    from models.url_analyzer import FEATURE_WEIGHTS
+
+    xgb = xgb_metrics()
+    bert = bert_metrics()
+
+    return {
+        "system": "SentinelAI Fusion — Phishing Detection Engine",
+        "version": "3.0.0",
+        "evaluation": {
+            "url_classifier_xgboost": xgb,
+            "nlp_bert_phishing": bert,
+            "ensemble_architecture": {
+                "layers": [
+                    {
+                        "name": "NLP Intent Engine",
+                        "models": ["GPT-4o-mini (OpenRouter)", "BERT fine-tuned on ISCX-2016"],
+                        "fusion": "Weighted average: GPT 55% + BERT 45%",
+                        "weight_in_fusion": 0.35,
+                        "features": "semantic intent, 10 MITRE tactic classes, transformer embeddings",
+                    },
+                    {
+                        "name": "URL Risk Analyzer",
+                        "models": ["XGBoost classifier", f"{len(FEATURE_WEIGHTS)}-feature rule engine"],
+                        "fusion": "Weighted blend: Rules 60% + XGBoost 40%",
+                        "weight_in_fusion": 0.55,
+                        "features": "31 URL signals, WHOIS, DNS, URLhaus threat intel",
+                    },
+                    {
+                        "name": "Visual Brand Similarity",
+                        "models": ["Apify Playwright screenshot", "Replicate CLIP embeddings"],
+                        "fusion": "Screenshot + cosine similarity",
+                        "weight_in_fusion": 0.30,
+                        "features": "visual brand impersonation, heatmap regions",
+                    },
+                    {
+                        "name": "Header Authentication",
+                        "models": ["SPF/DKIM/DMARC parser"],
+                        "fusion": "Rule-based flag scoring",
+                        "weight_in_fusion": 0.19,
+                        "features": "email authentication chain analysis",
+                    },
+                    {
+                        "name": "Threat Intelligence",
+                        "models": ["URLhaus", "AlienVault OTX", "Knowledge Graph (200+ IOCs)"],
+                        "fusion": "IOC correlation boost",
+                        "weight_in_fusion": "0–0.30 boost",
+                        "features": "real-time campaign matching, MITRE ATT&CK correlation",
+                    },
+                ],
+                "final_fusion": "Attention-weighted ensemble (confidence-normalized) across all 5 layers",
+            },
+        },
+        "live_counters": {
+            "total_analyzed": _analysis_counter["total"],
+            "threats_detected": _analysis_counter["threats"],
+            "critical_alerts": _analysis_counter["critical"],
+            "phishing_blocked": _analysis_counter["phishing"],
+            "safe_passed": _analysis_counter["safe"],
+        },
+    }
 
 
 @router.post("/response/execute")

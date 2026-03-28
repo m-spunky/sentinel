@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 import { Search, Target, Share2, Activity, Filter, PlusCircle, Download } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,9 +8,12 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { GraphView } from "@/components/intelligence/GraphView"
 import { DetailsPanel } from "@/components/intelligence/DetailsPanel"
+import { type GraphNode } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 export default function IntelligencePage() {
+  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
+
   return (
     <div className="space-y-10 pb-10">
       {/* Page Header */}
@@ -27,12 +30,12 @@ export default function IntelligencePage() {
               <p className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.3em]">Explore campaigns, actors, and infrastructure relationships <span className="text-purple-400 italic lowercase font-normal">v2.4-graph-visualizer</span></p>
            </div>
         </div>
-        
+
         <div className="flex items-center space-x-4 w-full md:w-auto">
            <div className="relative group flex-1 md:flex-none">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-purple-400 transition-colors" />
-              <Input 
-                placeholder="Lookup Campaign ID, Actor, or IOC..." 
+              <Input
+                placeholder="Lookup Campaign ID, Actor, or IOC..."
                 className="w-full md:w-80 bg-[#1B263B]/50 border-white/5 focus:border-purple-500/40 rounded-xl pl-10 text-xs font-bold transition-all focus:ring-purple-500/20"
               />
            </div>
@@ -48,15 +51,15 @@ export default function IntelligencePage() {
 
       {/* Intelligence Grid */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch animate-in fade-in slide-in-from-bottom-8 duration-1000">
-        
+
         {/* Graph Area (col-span-8) */}
         <div className="col-span-12 lg:col-span-8 min-h-[500px] lg:h-[850px]">
-           <GraphView />
+           <GraphView onNodeSelect={setSelectedNode} />
         </div>
-        
+
         {/* Details Panel (col-span-4) */}
         <div className="col-span-12 lg:col-span-4 min-h-[500px] lg:h-[850px]">
-           <DetailsPanel />
+           <DetailsPanel selectedNode={selectedNode} />
         </div>
 
         {/* Action Panel Footer (Operational Intel) */}
@@ -72,7 +75,7 @@ export default function IntelligencePage() {
                        Cross-referencing global telemetry with known actor signatures
                     </p>
                  </div>
-                 
+
                  <div className="flex flex-wrap items-center justify-center gap-4">
                     {[
                       { label: "Sync OSINT", icon: Share2 },
@@ -95,4 +98,3 @@ export default function IntelligencePage() {
     </div>
   )
 }
-

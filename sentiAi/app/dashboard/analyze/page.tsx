@@ -23,6 +23,7 @@ import { TransparencyPanel } from "@/components/analyze/TransparencyPanel"
 import type { AnalysisResult } from "@/lib/api"
 import { generateReport, submitFeedback } from "@/lib/api"
 import { WS_BASE } from "@/lib/api"
+import { useGlobalStore } from "@/lib/global-store"
 
 type InputTab = "email" | "url" | "headers" | "qr" | "attachment"
 type AnalysisState = "idle" | "analyzing" | "done" | "error"
@@ -319,6 +320,7 @@ export default function AnalyzePage() {
   const [gmailAttachments, setGmailAttachments] = useState<AttachmentAnalysis | null>(null)
   const [gmailBanner, setGmailBanner] = useState<string | null>(null)
   const [piiRedacted, setPiiRedacted] = useState<string[] | undefined>(undefined)
+  const { visualSandboxEnabled: visualEnabled } = useGlobalStore()
   const wsRef = useRef<WebSocket | null>(null)
   const qrInputRef = useRef<HTMLInputElement>(null)
   const attachmentInputRef = useRef<HTMLInputElement>(null)
@@ -414,6 +416,11 @@ export default function AnalyzePage() {
     setResult(null)
     setPipelineLayers([])
 
+    // Safe error extractor — handles non-JSON responses (plain text 500s, Nginx errors, etc.)
+    const getErrMsg = async (r: Response, fallback: string): Promise<string> => {
+      try { const j = await r.json(); return j.detail || j.message || fallback } catch { return fallback }
+    }
+
     try {
       let res: AnalysisResult
 
@@ -421,7 +428,7 @@ export default function AnalyzePage() {
         const form = new FormData()
         form.append("file", attachmentFile)
         const resp = await fetch("/api/v1/analyze/attachment", { method: "POST", body: form })
-        if (!resp.ok) throw new Error((await resp.json()).detail || "Attachment analysis failed")
+        if (!resp.ok) throw new Error(await getErrMsg(resp, "Attachment analysis failed"))
         const data = await resp.json()
         // Use full_analysis if available, otherwise build a minimal result from attachment data
         if (data.full_analysis) {
@@ -450,18 +457,22 @@ export default function AnalyzePage() {
         const form = new FormData()
         form.append("file", qrFile)
         const resp = await fetch("/api/v1/quishing/decode", { method: "POST", body: form })
-        if (!resp.ok) throw new Error((await resp.json()).detail || "QR analysis failed")
+        if (!resp.ok) throw new Error(await getErrMsg(resp, "QR analysis failed"))
         const data = await resp.json()
         res = data.analysis
       } else {
         const endpoint = tab === "url" ? "/api/v1/analyze/url" : tab === "headers" ? "/api/v1/analyze/headers" : "/api/v1/analyze/email"
-        const body = tab === "url" ? { url: content } : tab === "headers" ? { headers: content } : { content }
+        const body = tab === "url"
+          ? { url: content, options: { run_visual: visualEnabled } }
+          : tab === "headers"
+          ? { headers: content, options: { run_visual: false } }
+          : { content, options: { run_visual: visualEnabled } }
         const resp = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         })
-        if (!resp.ok) throw new Error((await resp.json()).detail || `Error ${resp.status}`)
+        if (!resp.ok) throw new Error(await getErrMsg(resp, `Analysis failed (HTTP ${resp.status})`))
         res = await resp.json()
       }
 
@@ -471,7 +482,7 @@ export default function AnalyzePage() {
       setError(e instanceof Error ? e.message : "Analysis failed. Is the backend running on port 8001?")
       setState("error")
     }
-  }, [tab, inputText, urlInput, qrFile, attachmentFile])
+  }, [tab, inputText, urlInput, qrFile, attachmentFile, visualEnabled])
 
   // Auto-trigger analysis once Gmail email content is populated
   useEffect(() => {
@@ -515,15 +526,17 @@ export default function AnalyzePage() {
             </p>
           </div>
         </div>
-        {state === "done" && (
-          <div className="flex items-center gap-3">
-            <FeedbackBar eventId={result!.event_id} />
-            <Button onClick={handleReset} variant="ghost" className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-300">
-              <X className="h-3.5 w-3.5 mr-2" />
-              New Scan
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {state === "done" && (
+            <>
+              <FeedbackBar eventId={result!.event_id} />
+              <Button onClick={handleReset} variant="ghost" className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-300">
+                <X className="h-3.5 w-3.5 mr-2" />
+                New Scan
+              </Button>
+            </>
+          )}
+        </div>
       </header>
 
       {/* Gmail source banner */}

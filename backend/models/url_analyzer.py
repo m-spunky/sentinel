@@ -446,12 +446,32 @@ async def score_url(url: str, do_live_lookup: bool = True) -> dict:
         }
 
     raw = sum(sc.values())
-    score = round(max(0.04, min(raw, 0.99)), 4)
+    rule_score = round(max(0.04, min(raw, 0.99)), 4)
+
+    # ── ML ensemble: blend rule-based + XGBoost scores ────────────────────────
+    ml_score = -1.0
+    ml_used = False
+    try:
+        from models.ml_url_classifier import predict_proba as _ml_predict
+        ml_score = _ml_predict(url)
+    except Exception:
+        pass
+
+    if ml_score >= 0.0:
+        # Weighted blend: 60% rules (with rich context from WHOIS/DNS), 40% ML
+        score = round(max(0.04, min(rule_score * 0.60 + ml_score * 0.40, 0.99)), 4)
+        ml_used = True
+    else:
+        score = rule_score
+
     confidence = round(min(0.45 + len(sc) * 0.06, 0.99), 4)
 
     # Known malicious → confidence boost
     if sc.get("known_malicious_urlhaus"):
         confidence = 0.99
+    elif ml_used:
+        # ML model boosts confidence slightly
+        confidence = round(min(confidence + 0.05, 0.99), 4)
 
     top_features = sorted(sc.items(), key=lambda x: x[1], reverse=True)[:10]
     shap_values = {k: round(v, 4) for k, v in sc.items()}
@@ -465,6 +485,8 @@ async def score_url(url: str, do_live_lookup: bool = True) -> dict:
         "whois": whois_data,
         "dns": dns_data,
         "urlhaus": urlhaus_data,
+        "ml_score": round(ml_score, 4) if ml_used else None,
+        "rule_score": rule_score,
         "url_breakdown": {
             "domain": domain,
             "is_https": bool(features.get("is_https")),

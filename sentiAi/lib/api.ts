@@ -14,7 +14,8 @@ export interface ModelBreakdown {
   }
   visual: {
     score: number; weight: number; matched_brand: string; similarity: number
-    screenshot_url?: string
+    screenshot_url?: string   // legacy: base64 data URL
+    screenshot_path?: string  // preferred: /screenshots/filename.jpg served from backend
   }
   header: {
     score: number; weight: number; flags: string[]

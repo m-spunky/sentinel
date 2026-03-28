@@ -275,45 +275,53 @@ export function EvidencePanel({ model_breakdown, urls_analyzed, verdict }: Evide
             </div>
 
             {/* Apify screenshot */}
-            {visual.screenshot_url ? (
-              <div className="space-y-2">
-                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                  <Eye className="h-3 w-3 text-blue-400" />
-                  Live Screenshot — Apify Sandbox
-                </p>
-                <div className="relative rounded-xl overflow-hidden border border-white/10 group cursor-pointer">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={visual.screenshot_url}
-                    alt="Phishing page screenshot"
-                    className="w-full object-cover max-h-64 group-hover:scale-[1.02] transition-transform duration-300"
-                  />
-                  {visual.score >= 0.65 && (
-                    <div className="absolute inset-0 bg-red-500/10 border-2 border-red-500/40 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Badge className="bg-red-500/90 text-white border-0 font-black uppercase text-[10px]">
-                        ⚠ Credential Harvesting Page
-                      </Badge>
-                    </div>
-                  )}
-                  <a
-                    href={visual.screenshot_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <ExternalLink className="h-3.5 w-3.5 text-white" />
-                  </a>
+            {(() => {
+              // Support both new screenshot_path (static file) and legacy screenshot_url (base64)
+              const BACKEND = (typeof window !== "undefined" && process.env.NEXT_PUBLIC_API_URL) || "http://localhost:8001"
+              const imgSrc = visual.screenshot_path
+                ? `${BACKEND}${visual.screenshot_path}`
+                : visual.screenshot_url || null
+              return imgSrc ? (
+                <div className="space-y-2">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                    <Eye className="h-3 w-3 text-blue-400" />
+                    Live Screenshot — Apify Sandbox
+                  </p>
+                  <div className="relative rounded-xl overflow-hidden border border-white/10 group cursor-pointer">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imgSrc}
+                      alt="Phishing page screenshot"
+                      className="w-full object-cover max-h-64 group-hover:scale-[1.02] transition-transform duration-300"
+                      onError={e => { (e.target as HTMLImageElement).style.display = "none" }}
+                    />
+                    {visual.score >= 0.65 && (
+                      <div className="absolute inset-0 bg-red-500/10 border-2 border-red-500/40 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Badge className="bg-red-500/90 text-white border-0 font-black uppercase text-[10px]">
+                          ⚠ Credential Harvesting Page
+                        </Badge>
+                      </div>
+                    )}
+                    <a
+                      href={imgSrc}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 text-white" />
+                    </a>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 space-y-2 border border-white/5 rounded-xl bg-white/2">
-                <ImageIcon className="h-8 w-8 text-slate-700" />
-                <p className="text-[10px] text-slate-600 uppercase font-bold tracking-widest">
-                  {visual.score < 0.1 ? "Screenshot not captured (low URL risk)" : "Screenshot unavailable — Apify token not configured"}
-                </p>
-              </div>
-            )}
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 space-y-2 border border-white/5 rounded-xl bg-white/2">
+                  <ImageIcon className="h-8 w-8 text-slate-700" />
+                  <p className="text-[10px] text-slate-600 uppercase font-bold tracking-widest">
+                    {visual.score < 0.1 ? "Screenshot not captured (Visual Sandbox is OFF)" : "Screenshot unavailable — enable Visual Sandbox toggle"}
+                  </p>
+                </div>
+              )
+            })()}
           </div>
         )}
 

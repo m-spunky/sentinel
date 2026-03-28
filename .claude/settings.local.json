@@ -38,7 +38,13 @@
       "Bash(curl:*)",
       "Bash(python -c \"from models.attachment_analyzer import analyze_attachment_bytes, analyze_attachments_with_bytes, _CONTENT_SCAN_EXTS; print\\(''OK — content scan exts:'', len\\(_CONTENT_SCAN_EXTS\\)\\)\")",
       "Bash(python -m py_compile \"D:/Projects/Sentinel/backend/chat/sentinel_chat.py\")",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(wc -l /d/Projects/Sentinel/backend/routers/*.py)",
+      "Bash(grep -v \"^$\")",
+      "Bash(grep -E \"^\\\\s+\\\\[|^$\")",
+      "Bash(xargs grep:*)",
+      "Bash(cat /d/Projects/Sentinel/backend/routers/*.py)",
+      "Bash(grep:*)"
     ]
   }
 }

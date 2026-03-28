@@ -3,8 +3,10 @@ SentinelAI Fusion — FastAPI Backend
 PS-01: AI-powered phishing detection (email, URL, headers, QR code)
 + PS-02/03/04/05 bonus capabilities for maximum hackathon coverage.
 """
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
 from config import FRONTEND_URL, PORT
@@ -27,6 +29,27 @@ async def lifespan(app: FastAPI):
         print(f"[SentinelAI] RAG pipeline: {len(rag._docs)} documents")
     except Exception as e:
         print(f"[SentinelAI] RAG init: {e}")
+    # Pre-train ML URL classifier
+    try:
+        from models.ml_url_classifier import get_evaluation_metrics, _model
+        m = get_evaluation_metrics()
+        if "error" not in m:
+            print(f"[SentinelAI] XGBoost URL classifier: F1={m.get('f1_score')}, AUC={m.get('roc_auc')}, Acc={m.get('accuracy')}")
+        else:
+            print(f"[SentinelAI] XGBoost URL classifier: {m.get('error')}")
+    except Exception as e:
+        print(f"[SentinelAI] ML classifier init: {e}")
+    # Pre-warm BERT phishing model (loads weights + runs evaluation)
+    try:
+        import asyncio as _asyncio
+        from models.bert_phishing_model import get_evaluation_metrics as bert_eval
+        m = bert_eval()  # triggers lazy load + evaluation
+        if "error" not in m:
+            print(f"[SentinelAI] BERT phishing model: F1={m.get('f1_score')}, AUC={m.get('roc_auc')}, Acc={m.get('accuracy')}")
+        else:
+            print(f"[SentinelAI] BERT model: {m.get('error')}")
+    except Exception as e:
+        print(f"[SentinelAI] BERT init: {e}")
     print("[SentinelAI] All systems operational.")
     yield
     print("[SentinelAI] Shutdown.")
@@ -76,6 +99,11 @@ app.include_router(intelligence.router)     # /api/v1/intelligence/*
 app.include_router(campaigns.router)        # /api/v1/campaigns, /api/v1/actors
 app.include_router(chat.router)             # /api/v1/chat
 app.include_router(reports.router)          # /api/v1/reports/*
+
+# ── Static: serve locally-saved screenshots ──────────────────────────────────
+_ss_dir = os.path.join(os.path.dirname(__file__), "data", "screenshots")
+os.makedirs(_ss_dir, exist_ok=True)
+app.mount("/screenshots", StaticFiles(directory=_ss_dir), name="screenshots")
 
 
 @app.get("/")

@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Header } from "@/components/layout/Header"
+import { GlobalStoreProvider } from "@/lib/global-store"
 import { cn } from "@/lib/utils"
 
 export default function DashboardLayout({
@@ -13,6 +14,7 @@ export default function DashboardLayout({
   const [collapsed, setCollapsed] = useState(false)
 
   return (
+    <GlobalStoreProvider>
     <div className="flex h-screen w-screen overflow-hidden" style={{ backgroundColor: "var(--bg-base)", color: "var(--fg)" }}>
       {/* Desktop Sidebar */}
       <div
@@ -44,5 +46,6 @@ export default function DashboardLayout({
         </main>
       </div>
     </div>
+    </GlobalStoreProvider>
   )
 }

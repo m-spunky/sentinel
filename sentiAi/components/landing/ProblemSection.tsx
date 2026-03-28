@@ -30,7 +30,7 @@ export function ProblemSection() {
   ]
 
   return (
-    <section id="problem" className="relative py-16 md:py-20 lg:py-24 px-6 bg-[#0a0e1a] overflow-hidden border-t border-white/5">
+    <section id="problem" className="relative py-16 md:py-20 lg:py-24 px-6 bg-background overflow-hidden border-t border-border/50">
       <div className="absolute top-1/2 left-0 -translate-y-1/2 h-[600px] w-[600px] bg-red-500/5 rounded-full blur-[140px] -z-10" />
 
       <div className="max-w-7xl mx-auto flex flex-col items-center">
@@ -60,7 +60,7 @@ export function ProblemSection() {
 
                 <div className="space-y-6 pt-6 px-6">
                    <div className={cn(
-                     "h-14 w-14 rounded-2xl bg-[#070D14] flex items-center justify-center border border-white/5 transition-all group-hover:scale-110 shadow-2xl",
+                     "h-14 w-14 rounded-2xl bg-muted flex items-center justify-center border border-border/30 transition-all group-hover:scale-110 shadow-2xl",
                      pt.hoverBorder,
                      pt.accent
                    )}>
@@ -76,14 +76,14 @@ export function ProblemSection() {
            ))}
         </div>
 
-        <div className="mt-32 w-full max-w-5xl h-[300px] rounded-[3rem] border border-white/5 bg-[#070D14]/80 flex flex-col items-center justify-center p-12 overflow-hidden shadow-2xl relative group">
-           <div className="absolute inset-0 bg-[#0D1B2A]/50 backdrop-blur-3xl -z-10" />
+        <div className="mt-32 w-full max-w-5xl h-[300px] rounded-[3rem] border border-border/20 bg-muted/80 flex flex-col items-center justify-center p-12 overflow-hidden shadow-2xl relative group">
+           <div className="absolute inset-0 bg-muted/50 backdrop-blur-3xl -z-10" />
            <div className="flex flex-col items-center text-center space-y-6 relative z-10">
               <div className="flex -space-x-4 opacity-40 group-hover:opacity-100 transition-all group-hover:scale-110">
                  <div className="h-16 w-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
                     <XCircle className="h-8 w-8" />
                  </div>
-                 <div className="h-16 w-16 rounded-full bg-[#070D14] border border-white/5 flex items-center justify-center text-muted-foreground/40 font-black italic">VS</div>
+                 <div className="h-16 w-16 rounded-full bg-muted border border-border/20 flex items-center justify-center text-muted-foreground/40 font-black italic">VS</div>
                  <div className="h-16 w-16 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.3)]">
                     <Zap className="h-8 w-8" />
                  </div>

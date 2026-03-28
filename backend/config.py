@@ -20,7 +20,16 @@ PORT = int(os.getenv("PORT", 8001))
 OPENROUTER_CHAT_MODEL = "openai/gpt-4o"
 OPENROUTER_FAST_MODEL = "openai/gpt-4o-mini"
 
+# Google OAuth2 (Gmail integration)
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8001/api/v1/gmail/callback")
+
+# HaveIBeenPwned (dark web credential exposure)
+HIBP_API_KEY = os.getenv("HIBP_API_KEY", "")
+
 # Feature flags
 VISUAL_ANALYSIS_ENABLED = bool(APIFY_API_TOKEN and REPLICATE_API_TOKEN)
 LIVE_IOC_FEEDS_ENABLED = True
 RAG_ENABLED = True
+GMAIL_ENABLED = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)

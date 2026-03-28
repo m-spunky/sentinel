@@ -15,7 +15,7 @@ export function ProcessFlow() {
   ]
 
   return (
-    <section id="process" className="relative py-16 md:py-20 lg:py-24 px-6 bg-[#070D14] overflow-hidden border-y border-white/5">
+    <section id="process" className="relative py-16 md:py-20 lg:py-24 px-6 bg-muted overflow-hidden border-y border-border/50">
       <div className="absolute top-[20%] left-1/2 -translate-x-1/2 h-0.5 w-full bg-gradient-to-r from-transparent via-blue-500/20 to-transparent -z-10" />
 
       <div className="max-w-7xl mx-auto space-y-20 flex flex-col items-center">

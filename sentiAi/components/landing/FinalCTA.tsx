@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 
 export function FinalCTA() {
   return (
-    <section className="relative py-16 md:py-20 lg:py-24 px-6 bg-[#0a0e1a] overflow-hidden border-t border-white/5">
+    <section className="relative py-16 md:py-20 lg:py-24 px-6 bg-background overflow-hidden border-t border-border/50">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[1000px] w-[1000px] bg-blue-500/5 rounded-full blur-[200px] -z-10 animate-pulse" />
 
       <div className="max-w-7xl mx-auto flex flex-col items-center">
@@ -41,8 +41,8 @@ export function FinalCTA() {
            </div>
         </div>
 
-        <div className="mt-16 w-full max-w-5xl rounded-[3rem] border border-blue-500/10 bg-[#070D14]/80 flex flex-col items-center justify-center p-20 overflow-hidden shadow-2xl relative group cursor-none">
-           <div className="absolute inset-0 bg-[#0D1B2A]/50 backdrop-blur-3xl -z-10" />
+        <div className="mt-16 w-full max-w-5xl rounded-[3rem] border border-blue-500/10 bg-muted/80 flex flex-col items-center justify-center p-20 overflow-hidden shadow-2xl relative group cursor-none">
+           <div className="absolute inset-0 bg-muted/50 backdrop-blur-3xl -z-10" />
            <div className="flex flex-col items-center text-center space-y-10 relative z-10">
               <div className="h-24 w-24 rounded-[2rem] bg-blue-500/20 border border-blue-500/40 flex items-center justify-center shadow-[0_0_40px_rgba(59,130,246,0.3)] animate-bounce group-hover:scale-110 transition-transform">
                  <ShieldCheck className="h-12 w-12 text-blue-400" />

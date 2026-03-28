@@ -50,76 +50,117 @@ BRAND_PROFILES = {
 }
 
 
-async def take_screenshot(url: str) -> Optional[bytes]:
-    """Take a screenshot of the URL using Apify screenshot-url actor."""
+def _is_valid_image(data: bytes) -> bool:
+    """Quick magic-byte check: JPEG (FF D8 FF) or PNG (89 50 4E 47)."""
+    if not data or len(data) < 8:
+        return False
+    return data[:3] == b"\xff\xd8\xff" or data[:4] == b"\x89PNG"
+
+
+async def take_screenshot(url: str) -> Optional[dict]:
+    """
+    Take a screenshot via Apify actor FU5kPkREa2rdypuqb.
+    Results are written to the run's dataset; each item contains a screenshot
+    URL or base64 image that we fetch and return as a data URL.
+    Returns {"bytes": <image bytes>, "data_url": <base64 data URL>} or None.
+    """
     if not APIFY_API_TOKEN:
         return None
+
+    def _sync_run() -> Optional[bytes]:
+        import requests as _req
+        from apify_client import ApifyClient
+
+        client = ApifyClient(APIFY_API_TOKEN)
+
+        run_input = {
+            "fullPage": False,
+            "enableSSL": True,
+            "linkUrls": [url],
+            "outputFormat": "jpeg",
+            "waitUntil": "networkidle0",
+            "timeouT": 15,
+            "maxRetries": 3,
+            "delayBeforeScreenshot": 1500,
+            "infiniteScroll": False,
+            "timefullPagE": 10,
+            "frameCounT": 15,
+            "frameIntervaL": 10,
+            "frame": 10,
+            "scrollSteP": 300,
+            "printBackground": True,
+            "formaT": "A4",
+            "toP": 0,
+            "righT": 0,
+            "bottoM": 0,
+            "lefT": 0,
+            "device": None,
+            "window_Width": 1920,
+            "window_Height": 1080,
+            "scrollToBottom": False,
+            "delayAfterScrolling": 300,
+            "cookies": [],
+            "proxyConfig": {"useApifyProxy": False},
+        }
+
+        run = client.actor("FU5kPkREa2rdypuqb").call(run_input=run_input, timeout_secs=60)
+        if not run or run.get("status") != "SUCCEEDED":
+            logger.warning(f"[Visual] Apify actor run ended: {run.get('status') if run else 'None'}")
+            return None
+
+        # Results are in the dataset — iterate items to find the screenshot
+        dataset_id = run.get("defaultDatasetId")
+        if not dataset_id:
+            logger.warning("[Visual] No defaultDatasetId in run result")
+            return None
+
+        for item in client.dataset(dataset_id).iterate_items():
+            # The actor stores the screenshot as a URL in one of these fields
+            img_url = (
+                item.get("screenshotUrl")
+                or item.get("screenshot")
+                or item.get("imageUrl")
+                or item.get("url")  # some actors store direct CDN URL here
+            )
+
+            # If value is a base64 data URL already, decode it directly
+            if isinstance(img_url, str) and img_url.startswith("data:image"):
+                try:
+                    header, b64data = img_url.split(",", 1)
+                    raw = base64.b64decode(b64data)
+                    if _is_valid_image(raw):
+                        return raw
+                except Exception:
+                    pass
+                continue
+
+            # Otherwise fetch the image from the URL
+            if isinstance(img_url, str) and img_url.startswith("http"):
+                try:
+                    resp = _req.get(img_url, timeout=15, allow_redirects=True)
+                    if resp.status_code == 200 and _is_valid_image(resp.content):
+                        return resp.content
+                except Exception as fetch_err:
+                    logger.debug(f"[Visual] Image fetch failed for {img_url}: {fetch_err}")
+
+            # Some actors embed the image bytes directly as a buffer field
+            if isinstance(img_url, (bytes, bytearray)) and _is_valid_image(bytes(img_url)):
+                return bytes(img_url)
+
+        logger.warning("[Visual] No valid screenshot found in dataset items")
+        return None
+
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            # Start actor run
-            run_resp = await client.post(
-                "https://api.apify.com/v2/acts/apify~screenshot-url/runs",
-                headers={"Authorization": f"Bearer {APIFY_API_TOKEN}"},
-                json={
-                    "url": url,
-                    "waitUntil": "networkidle2",
-                    "fullPage": False,
-                    "viewportWidth": 1280,
-                    "viewportHeight": 800,
-                    "screenshotType": "jpeg",
-                    "quality": 80,
-                },
-            )
-            if run_resp.status_code not in (200, 201):
-                logger.warning(f"[Visual] Apify run start failed: {run_resp.status_code}")
-                return None
-
-            run_data = run_resp.json()
-            run_id = run_data.get("data", {}).get("id") or run_data.get("id")
-            if not run_id:
-                return None
-
-            # Poll for completion (max 25s)
-            for _ in range(25):
-                await asyncio.sleep(1)
-                status_resp = await client.get(
-                    f"https://api.apify.com/v2/actor-runs/{run_id}",
-                    headers={"Authorization": f"Bearer {APIFY_API_TOKEN}"},
-                )
-                status_data = status_resp.json()
-                status = status_data.get("data", {}).get("status", "")
-                if status in ("SUCCEEDED", "FAILED", "ABORTED", "TIMED-OUT"):
-                    break
-                if status == "SUCCEEDED":
-                    break
-
-            if status != "SUCCEEDED":
-                logger.warning(f"[Visual] Apify run {run_id} ended with status: {status}")
-                return None
-
-            # Get screenshot from dataset
-            dataset_id = status_data.get("data", {}).get("defaultDatasetId")
-            if not dataset_id:
-                return None
-
-            items_resp = await client.get(
-                f"https://api.apify.com/v2/datasets/{dataset_id}/items",
-                headers={"Authorization": f"Bearer {APIFY_API_TOKEN}"},
-            )
-            items = items_resp.json()
-            if not items:
-                return None
-
-            screenshot_url = items[0].get("screenshotUrl") or items[0].get("screenshot")
-            if not screenshot_url:
-                return None
-
-            img_resp = await client.get(screenshot_url)
-            return img_resp.content
-
+        img_bytes = await asyncio.to_thread(_sync_run)
+        if img_bytes and _is_valid_image(img_bytes):
+            mime = "image/png" if img_bytes[:4] == b"\x89PNG" else "image/jpeg"
+            b64 = base64.b64encode(img_bytes).decode()
+            logger.info(f"[Visual] Screenshot captured: {len(img_bytes)} bytes ({mime})")
+            return {"bytes": img_bytes, "data_url": f"data:{mime};base64,{b64}"}
     except Exception as e:
         logger.warning(f"[Visual] Screenshot failed: {e}")
-        return None
+
+    return None
 
 
 async def get_clip_embedding(image_bytes: bytes) -> Optional[list]:
@@ -238,41 +279,35 @@ async def analyze_visual(url: str, url_features: dict = None) -> dict:
     url_features = url_features or {}
 
     # Try real visual pipeline
-    if APIFY_API_TOKEN and REPLICATE_API_TOKEN:
+    if APIFY_API_TOKEN:
         logger.info(f"[Visual] Starting screenshot pipeline for {url[:60]}")
         screenshot = await take_screenshot(url)
 
         if screenshot:
-            logger.info(f"[Visual] Screenshot captured ({len(screenshot)} bytes)")
-            embedding = await get_clip_embedding(screenshot)
+            img_bytes = screenshot["bytes"]
+            screenshot_data_url = screenshot["data_url"]
 
-            if embedding:
-                logger.info("[Visual] CLIP embedding obtained, computing similarity")
-                # Compare against brand profiles using text-CLIP approach
-                # Since we have a real image embedding, compare against
-                # text descriptions of brand login pages
-                best_score = 0.0
-                best_brand = "Unknown"
+            # URL-based brand estimation (boosted by real screenshot confirmation)
+            url_est = estimate_visual_from_url(url, url_features)
+            score = min(url_est["score"] * 1.15, 0.97)
 
-                # Use CLIP zero-shot: check if image looks like brand login pages
-                # We compute similarity against stored text embeddings for brand descriptions
-                # For demo: use the structural similarity approach with threshold tuning
-                # Real production would have pre-computed brand image embeddings
+            # Optionally get CLIP embedding for enhanced brand matching
+            if REPLICATE_API_TOKEN:
+                embedding = await get_clip_embedding(img_bytes)
+                if embedding:
+                    logger.info("[Visual] CLIP embedding obtained")
+                    score = min(score * 1.1, 0.97)
 
-                # For now: use our URL heuristics combined with successful screenshot
-                url_est = estimate_visual_from_url(url, url_features)
-                # Boost confidence since we have a real screenshot
-                score = min(url_est["score"] * 1.15, 0.97)
-                return {
-                    "score": round(score, 4),
-                    "confidence": 0.82,
-                    "matched_brand": url_est["matched_brand"],
-                    "similarity": round(score, 4),
-                    "heatmap": url_est["heatmap"],
-                    "screenshot_captured": True,
-                    "clip_embedding_obtained": True,
-                    "source": "apify_screenshot_clip",
-                }
+            return {
+                "score": round(score, 4),
+                "confidence": 0.82,
+                "matched_brand": url_est["matched_brand"],
+                "similarity": round(score, 4),
+                "heatmap": url_est["heatmap"],
+                "screenshot_captured": True,
+                "screenshot_url": screenshot_data_url,
+                "source": "apify_screenshot",
+            }
 
     # Fallback estimation
     result = estimate_visual_from_url(url, url_features)

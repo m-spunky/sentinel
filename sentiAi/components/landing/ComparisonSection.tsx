@@ -15,7 +15,7 @@ export function ComparisonSection() {
   ]
 
   return (
-    <section id="compare" className="relative py-16 md:py-20 lg:py-24 px-6 bg-[#0a0e1a] overflow-hidden border-t border-white/5">
+    <section id="compare" className="relative py-16 md:py-20 lg:py-24 px-6 bg-background overflow-hidden border-t border-border/50">
       <div className="absolute top-1/2 left-0 -translate-y-1/2 h-[600px] w-[600px] bg-blue-500/5 rounded-full blur-[140px] -z-10" />
       <div className="absolute top-[20%] right-[-10%] h-[500px] w-[500px] bg-blue-500/3 rounded-full blur-[120px] -z-1" />
 
@@ -39,7 +39,7 @@ export function ComparisonSection() {
                 <div key={i} className="group relative">
                    <div className="absolute -left-4 top-0 bottom-0 w-0.5 bg-blue-500/5 group-hover:bg-blue-500/40 group-hover:w-1 transition-all" />
 
-                   <div className="grid grid-cols-3 gap-8 py-8 px-6 rounded-2xl bg-[#070D14]/40 border border-white/5 group-hover:bg-[#0d1b2a]/40 group-hover:border-blue-500/10 transition-all duration-500">
+                   <div className="grid grid-cols-3 gap-8 py-8 px-6 rounded-2xl bg-muted/40 border border-border/20 group-hover:bg-muted/60 group-hover:border-blue-500/10 transition-all duration-500">
                       <div className="flex flex-col space-y-1">
                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Capability</span>
                          <span className="text-sm font-black text-foreground group-hover:text-blue-400 transition-colors">{row.feature}</span>

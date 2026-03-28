@@ -37,7 +37,7 @@ const STATIC_EVENTS: ThreatFeedEvent[] = [
   { id: "5", type: "phishing", title: "QR Code Phishing Attempt", description: "QR code points to HR portal clone — 91% visual similarity", severity: "high", timestamp: "", time_ago: "2h ago" },
 ]
 
-export function ThreatFeed() {
+export function ThreatFeed({ compact = false }: { compact?: boolean }) {
   const [events, setEvents] = useState<ThreatFeedEvent[]>([])
   const [wsConnected, setWsConnected] = useState(false)
   const [newEventId, setNewEventId] = useState<string | null>(null)
@@ -115,7 +115,8 @@ export function ThreatFeed() {
     }
   }, [])
 
-  const displayEvents = events.length > 0 ? events : STATIC_EVENTS
+  const allEvents = events.length > 0 ? events : STATIC_EVENTS
+  const displayEvents = compact ? allEvents.slice(0, 4) : allEvents
 
   return (
     <Card className="card-cyber overflow-hidden flex flex-col h-full">

@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Required to silence Turbopack/webpack config conflict in Next.js 16
+  turbopack: {},
   async rewrites() {
     return [
       {

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ShieldCheck, Menu, X, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/ThemeToggle"
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
@@ -17,10 +18,10 @@ export function Navbar() {
   }, [])
 
   const navLinks = [
-    { name: "Platform", href: "#solution" },
-    { name: "Capabilities", href: "#features" },
-    { name: "Process", href: "#process" },
-    { name: "Compare", href: "#compare" },
+    { name: "Features", href: "#features" },
+    { name: "How It Works", href: "#process" },
+    { name: "Dashboard", href: "/dashboard" },
+    { name: "Analyzer", href: "/dashboard/analyze" },
   ]
 
   return (
@@ -28,7 +29,7 @@ export function Navbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-[100] transition-all duration-500 border-b",
         scrolled
-          ? "bg-[#0a0e1a]/80 backdrop-blur-xl border-blue-500/10 py-3"
+          ? "bg-background/80 backdrop-blur-xl border-blue-500/10 py-3"
           : "bg-transparent border-transparent py-6"
       )}
     >
@@ -59,7 +60,8 @@ export function Navbar() {
         </div>
 
         {/* CTA */}
-        <div className="hidden md:flex items-center space-x-4 animate-in fade-in slide-in-from-right-4 duration-1000">
+        <div className="hidden md:flex items-center space-x-3 animate-in fade-in slide-in-from-right-4 duration-1000">
+           <ThemeToggle />
            <Link href="/dashboard">
               <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-foreground hover:text-blue-400 hover:bg-blue-500/5 rounded-xl px-6">
                  Sign In
@@ -84,7 +86,7 @@ export function Navbar() {
 
       {/* Mobile Menu */}
       <div className={cn(
-        "fixed inset-0 bg-[#0a0e1a]/95 backdrop-blur-2xl z-[90] transition-all duration-500 md:hidden pt-32 px-10 flex flex-col items-center space-y-10",
+        "fixed inset-0 bg-background/95 backdrop-blur-2xl z-[90] transition-all duration-500 md:hidden pt-32 px-10 flex flex-col items-center space-y-10",
         mobileMenuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full pointer-events-none"
       )}>
          {navLinks.map((link) => (

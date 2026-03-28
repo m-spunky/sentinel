@@ -6,9 +6,10 @@ Full system prompt from SentinelAI_MASTER_SYSTEM_PROMPT.py Section 4.
 import json
 import logging
 import re
+import asyncio
 from typing import Optional
 
-import httpx
+import requests
 
 from config import OPENROUTER_API_KEY, OPENROUTER_CHAT_MODEL, OPENROUTER_FAST_MODEL
 from intelligence.knowledge_graph import get_graph, CAMPAIGNS, THREAT_ACTORS
@@ -64,7 +65,14 @@ CONTEXT AWARENESS:
 - You know the current active campaigns and their status
 - You track which threats have been confirmed vs dismissed
 - You understand the organizational context (which departments are targeted)
-- You proactively alert on high-severity threats during conversation"""
+- You proactively alert on high-severity threats during conversation
+
+DATA FIDELITY — CRITICAL RULES:
+- When asked about a specific email's threat score, ALWAYS report the EXACT score from the GMAIL_MSG context line above. Never estimate, recalculate, or infer a different number.
+- If an email has both inbox_score and full_analysis_score, explain both: "The quick inbox scan scored X%; the full 5-layer analysis scored Y% because it additionally analyzed security headers and URLs."
+- When citing any analysis result, include the event_id or Gmail message ID as your source reference, e.g. "According to the cached analysis [EVT-XXXX] / [GMAIL_MSG id=...]"
+- If the user asks about an email you don't have data for, say "I don't have a cached analysis for that email. Would you like to run a full analysis?"
+- NEVER fabricate threat scores, verdicts, or findings. Every number you state must come from the context data above."""
 
 # ─── Explanation prompt ───────────────────────────────────────────────────────
 EXPLANATION_PROMPT = """You are the SentinelAI Fusion forensic explanation engine. Generate a professional forensic explanation narrative for this threat detection.
@@ -121,26 +129,29 @@ async def generate_explanation_narrative(analysis_result: dict, input_preview: s
         content_preview=input_preview[:300],
     )
 
+    def _call():
+        resp = requests.post(
+            url="https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://sentinelai.fusion",
+                "X-OpenRouter-Title": "SentinelAI Fusion",
+            },
+            data=json.dumps({
+                "model": OPENROUTER_FAST_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.2,
+                "max_tokens": 350,
+            }),
+            timeout=12.0
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     try:
-        async with httpx.AsyncClient(timeout=12.0) as client:
-            resp = await client.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://sentinelai.fusion",
-                    "X-Title": "SentinelAI Fusion",
-                },
-                json={
-                    "model": OPENROUTER_FAST_MODEL,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.2,
-                    "max_tokens": 350,
-                },
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"].strip()
+        data = await asyncio.to_thread(_call)
+        return data["choices"][0]["message"]["content"].strip()
     except Exception as e:
         logger.warning(f"[SentinelChat] Explanation generation failed: {e}")
         return _fallback_narrative(analysis_result)
@@ -198,29 +209,32 @@ async def chat(
 
     messages.append({"role": "user", "content": user_msg})
 
+    def _call():
+        resp = requests.post(
+            url="https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://sentinelai.fusion",
+                "X-OpenRouter-Title": "SentinelAI Fusion",
+            },
+            data=json.dumps({
+                "model": OPENROUTER_CHAT_MODEL,
+                "messages": [
+                    {"role": "system", "content": SENTINELCHAT_SYSTEM_PROMPT},
+                    *messages,
+                ],
+                "temperature": 0.3,
+                "max_tokens": 1024,
+            }),
+            timeout=30.0
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://sentinelai.fusion",
-                    "X-Title": "SentinelAI Fusion",
-                },
-                json={
-                    "model": OPENROUTER_CHAT_MODEL,
-                    "messages": [
-                        {"role": "system", "content": SENTINELCHAT_SYSTEM_PROMPT},
-                        *messages,
-                    ],
-                    "temperature": 0.3,
-                    "max_tokens": 1024,
-                },
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            response_text = data["choices"][0]["message"]["content"]
+        data = await asyncio.to_thread(_call)
+        response_text = data["choices"][0]["message"]["content"]
 
         sources = _extract_sources(message, response_text)
         suggested_actions = _extract_actions(response_text)
@@ -248,9 +262,17 @@ async def chat(
 
 def _build_platform_context(active_investigation: Optional[str] = None) -> str:
     """Inject live platform state into chat context."""
+    from routers.history import _history, get_accuracy_stats
+    from datetime import datetime
+
     graph = get_graph()
     active_camps = [c for c in CAMPAIGNS if c["status"] == "active"]
     critical_camps = [c for c in active_camps if c["risk_level"] == "critical"]
+
+    # Real stats from history
+    stats = get_accuracy_stats()
+    recent = _history[-10:] if _history else []
+    last_scan_ts = _history[-1]["timestamp"] if _history else "No scans yet"
 
     lines = [
         f"Active campaigns: {len(active_camps)} ({len(critical_camps)} CRITICAL)",
@@ -258,8 +280,93 @@ def _build_platform_context(active_investigation: Optional[str] = None) -> str:
         f"Threat actors tracked: {len(THREAT_ACTORS)} (FIN7, Lazarus Group, APT28, Scattered Spider, LAPSUS$)",
         f"Knowledge graph: {graph.G.number_of_nodes()} nodes, {graph.G.number_of_edges()} edges",
         "All detection engines: OPERATIONAL",
-        "Last scan: 2026-03-26T08:14:22Z",
+        f"Last scan: {last_scan_ts}",
+        "",
+        "=== USER PLATFORM HISTORY (REAL DATA) ===",
+        f"Total analyses run by this user: {stats['total_analyses']}",
     ]
+
+    # Accuracy stats (only if feedback exists)
+    if stats["accuracy_percent"] is not None:
+        lines.append(f"AI accuracy (from user feedback): {stats['accuracy_percent']}%")
+        lines.append(f"False positives reported: {stats['false_positives']} | Missed threats: {stats['missed']}")
+    else:
+        lines.append("AI accuracy: No feedback submitted yet")
+
+    # Verdict breakdown
+    if stats["verdict_breakdown"]:
+        vb = stats["verdict_breakdown"]
+        vb_str = ", ".join(f"{k}: {v}" for k, v in vb.items())
+        lines.append(f"Verdict breakdown: {vb_str}")
+
+    # Top impersonated brands
+    if stats["top_impersonated_brands"]:
+        brands_str = ", ".join(f"{b[0]} ({b[1]}x)" for b in stats["top_impersonated_brands"][:5])
+        lines.append(f"Top impersonated brands: {brands_str}")
+
+    lines.append(f"Avg inference time: {stats['avg_inference_ms']}ms")
+
+    # Recent analyses (last 5)
+    if recent:
+        lines.append("")
+        lines.append("=== RECENT ANALYSES (last 5) ===")
+        for e in recent[-5:]:
+            score_pct = round(e.get("threat_score", 0) * 100)
+            tactics_str = ", ".join(e.get("tactics", [])) or "none"
+            preview = e.get("input_preview", "")[:50]
+            lines.append(
+                f"[{e['event_id']}] {e['verdict']} ({score_pct}%) | "
+                f"Type: {e.get('input_type','?')} | "
+                f"Tactics: {tactics_str} | "
+                f"Preview: \"{preview}\" | "
+                f"Feedback: {e.get('feedback') or 'none'}"
+            )
+
+    # Gmail inbox context — structured data for accurate citation
+    try:
+        from routers.gmail import _gmail_cache
+        from models.pii_redactor import redact_for_llm
+        if _gmail_cache:
+            lines.append("")
+            lines.append("=== GMAIL INBOX — ANALYZED EMAILS (AUTHORITATIVE SCORES — ALWAYS CITE THESE EXACTLY) ===")
+            lines.append("NOTE: inbox_score = quick NLP scan of text only. full_analysis_score = complete 5-layer pipeline including headers/URLs/visual. Both are valid; full_analysis is more comprehensive.")
+            sorted_entries = sorted(
+                _gmail_cache.values(),
+                key=lambda x: x.get("analyzed_at", ""),
+                reverse=True,
+            )[:10]
+            for e in sorted_entries:
+                att = e.get("attachment_analysis")
+                att_note = f" | att_verdict={att['verdict']} att_count={att['count']}" if att and att.get("count", 0) > 0 else ""
+                flags_str = ", ".join(e.get("risk_flags", [])[:3]) or "none"
+                safe_from = redact_for_llm(e.get("from", "?"))
+                safe_subject = redact_for_llm(e.get("subject", "?")[:60])
+                flyer = " | IMAGE_FLYER=yes" if e.get("is_flyer") else ""
+
+                # Include full_analysis event_id and breakdown if available
+                fa = e.get("full_analysis") or {}
+                fa_event = fa.get("event_id", "")
+                fa_score = fa.get("threat_score")
+                fa_breakdown = fa.get("model_breakdown", {})
+                fa_line = ""
+                if fa_event:
+                    fa_line = (
+                        f" | full_analysis_event_id={fa_event}"
+                        f" full_analysis_score={round((fa_score or 0) * 100)}%"
+                        f" nlp={round(fa_breakdown.get('nlp', {}).get('score', 0) * 100)}%"
+                        f" url={round(fa_breakdown.get('url', {}).get('score', 0) * 100)}%"
+                        f" header={round(fa_breakdown.get('header', {}).get('score', 0) * 100)}%"
+                    )
+
+                lines.append(
+                    f"GMAIL_MSG id={e['id'][:12]} | inbox_score={round(e.get('risk_score', 0) * 100)}%"
+                    f" verdict={e.get('verdict','?')} | From={safe_from}"
+                    f" | Subject=\"{safe_subject}\" | flags=[{flags_str}]{att_note}{flyer}{fa_line}"
+                    f" | analyzed_at={e.get('analyzed_at','?')[:16]}"
+                )
+    except Exception:
+        pass
+
     if active_investigation:
         lines.insert(0, f"ACTIVE INVESTIGATION: Event ID {active_investigation}")
     return "\n".join(lines)

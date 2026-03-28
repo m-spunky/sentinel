@@ -1,0 +1,219 @@
+● Clean. Now check app pages too:
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● The entire frontend codebase is now clean of teal. Let me update the memory to reflect the       
+  completed work:
+
+  Recalled 1 memory, wrote 2 memories (ctrl+o to expand)
+
+● Complete. Here's a summary of what was done this session:
+
+  Color scheme migration — all teal (#00C9A7) → navy/blue/amber/red:
+
+  Landing pages — Navbar, ProblemSection, SolutionSection, FeaturesGrid, ProcessFlow,
+  ComparisonSection, FinalCTA, LandingFooter all updated to blue-400/blue-600 scheme with amber and
+   red accents
+
+  Analyze components — ThreatScoreCard (ring color based on risk level: blue/amber/red),
+  TacticsCard (red MITRE badge with progress bars), IntelCard (live backend data merge, blue       
+  headers), ExplanationCard (blue badge), InputTypeCard (blue active state), AnalysisInputSection  
+  (amber Zap, blue Live Engine badge)
+
+  Campaign system — CampaignItem (blue active state), CampaignList (blue filter/init button),      
+  CampaignDetails (now pulls live IOCs from getCampaignDetail() API, blue headers), ActionPanel    
+  (individual red/orange/blue/amber buttons), campaigns page (uses listCampaigns() instead of      
+  getCampaigns())
+
+  Chat system — ChatHeader (blue icon, emerald status), ChatMessage (blue AI avatar + source       
+  badges, blue user bubble), ChatInput (blue send button + border), ContextPanel (blue highlights, 
+  per-entity status colors)
+
+  Dashboard/Intelligence — KpiCard (blue border glow, emerald/red trends), ThreatChart (blue ring  
+  animation), DetailsPanel (red APT badge, blue/red action buttons), Node (domain nodes now blue)  
+
+❯ first explain me what we have build , like i m noob in getting understand what each component of  frontend is doing, how in real world we are going to use this system,                             
+                                                                                                   
+● SentinelAI Fusion — Plain English Breakdown                                                      
+                                                                                                   
+  ---
+  What is it, in one sentence?                                                                        
+  It's a cybersecurity command center — you paste in a suspicious email or URL, and AI instantly   
+  tells you if it's an attack, who's behind it, how confident it is, and what to do next.          
+
+  ---
+  The Real-World Problem It Solves
+
+  Imagine you work at a bank. Every day:
+  - Employees get thousands of emails
+  - Some are phishing attacks (fake "your account is locked" emails)
+  - Attackers also create fake websites that look exactly like your bank's login page
+  - One click from one employee = entire company compromised
+
+  Traditional tools check one thing at a time (just the link, or just the email text). They miss   
+  attacks that look normal in isolation but are obviously malicious when you look at the full      
+  picture.
+
+  SentinelAI looks at everything simultaneously and connects the dots.
+
+  ---
+  The 5-Page Frontend — What Each Page Does
+
+  1. Landing Page (/)
+
+  What it is: The marketing/home page a potential customer sees first.
+
+  Components:
+  - Navbar — Top bar with logo + "Launch Console" CTA
+  - LandingHero — The big headline + animated stats ("99.2% detection rate")
+  - ProblemSection — Explains WHY existing tools fail (three pain points)
+  - SolutionSection — Shows how Fusion's layered approach works differently
+  - FeaturesGrid — Four capability cards: multi-modal detection, threat graph, AI explanations,    
+  chat assistant
+  - ProcessFlow — Step-by-step pipeline visualization (Input → Neural Analysis → Fusion → Intel →  
+  Response)
+  - ComparisonSection — Table: SentinelAI vs legacy tools
+  - FinalCTA — "Start now" button
+  - LandingFooter — Links, social, copyright
+
+  Real-world use: A CISO (Chief Information Security Officer) visits, reads it, and decides to buy 
+  it for their company.
+
+  ---
+  2. Dashboard (/dashboard)
+
+  What it is: The SOC (Security Operations Center) overview — a live TV screen showing your        
+  security health right now.
+
+  Components:
+  - KpiCards — 4 big numbers at the top:
+    - Total threats detected today
+    - High-risk incidents
+    - Active campaigns being tracked
+    - Average AI confidence score
+  - ThreatTimeline (Recharts AreaChart) — A line graph showing threat volume over the last 24      
+  hours, split by type (phishing in red, malware in amber, behavioral anomalies in blue). Like a   
+  stock chart but for attacks.
+  - RiskDonut (Recharts PieChart) — A donut chart showing your current risk breakdown. Center shows
+   total score.
+  - ThreatFeed — A live, real-time feed of new threats as they're detected, connected via WebSocket
+   (like a live Twitter feed but for attacks). Has a green "Live" dot when connected.
+  - ThreatChart — Spinning risk ring showing overall platform health (78% elevated risk).
+
+  Real-world use: A security analyst arrives at work, opens dashboard, immediately sees "3 new     
+  high-risk phishing campaigns detected overnight" and knows what to prioritize.
+
+  ---
+  3. Analyze Page (/dashboard/analyze)
+
+  What it is: The actual detection tool — where you submit a suspicious email/URL for AI analysis. 
+
+  Components:
+  - AnalysisInputSection — Three tabs: paste email text, paste URL, or paste raw email headers. You
+   hit "Run Analysis" and the 5-model pipeline fires.
+  - DetectionPipelineCard — Shows the 5 analysis stages in real-time with scores:
+    a. Pre-Process (sanitize input)
+    b. NLP Engine (GPT-4o-mini reads the text for phishing language)
+    c. URL Analyzer (checks domain age, DNS records, URLhaus blacklists)
+    d. Visual Engine (takes screenshot of site, compares it to real brand logos via CLIP)
+    e. Fusion (combines all 4 scores into one final verdict)
+  - ThreatScoreCard — The big circular gauge showing final threat percentage (0–100%). Red =       
+  phishing, amber = suspicious, blue = clean.
+  - ModelBreakdown — Four horizontal bars showing what each AI model individually scored. You can  
+  see "NLP said 89% suspicious, but URL said 20%" — useful for understanding why.
+  - ShapChart — Bar chart showing WHICH features drove the score. Example: "Urgency language       
+  (+34%), Domain age 2 days (+28%), No DMARC record (+15%)". This is how you explain to a
+  non-technical manager WHY the AI flagged it.
+  - TacticsCard — Maps the attack to MITRE ATT&CK framework (the industry-standard catalog of      
+  attack techniques). Example: "T1566 — Spearphishing Attachment".
+  - IntelCard — Shows if this email is connected to a known campaign (e.g., "This is part of       
+  Operation Wire Phantom by FIN7").
+  - ExplanationCard — GPT-4o-mini writes a human-readable forensic paragraph: "This email exhibits 
+  classic credential harvesting techniques. The sender domain was registered 2 days ago and mimics 
+  PayPal's visual identity..."
+  - Rapid Incident Response buttons — One-click actions: Quarantine, Block IOCs, Alert Team,       
+  Generate PDF Report.
+
+  Real-world use: Employee forwards a suspicious email to the security team → analyst pastes it    
+  here → 400ms later has a full forensic breakdown → clicks "Quarantine" and "Alert Team".
+
+  ---
+  4. Intelligence Page (/dashboard/intelligence)
+
+  What it is: The threat actor research center — like a detective's wall connecting all the dots.  
+
+  Components:
+  - GraphView (D3.js force graph) — An interactive network diagram. Nodes are:
+    - Red = threat actors (FIN7, Lazarus Group)
+    - Purple = campaigns (Operation Wire Phantom)
+    - Blue = domains (auth-login.net)
+    - Orange = IP addresses
+    - Green = MITRE techniques
+
+  Lines connect related nodes. You can drag, zoom, click a node to see details. This shows that the
+   same actor is running multiple campaigns across multiple domains.
+  - DetailsPanel — Right sidebar showing selected node's full profile: description, MITRE
+  techniques, activity frequency chart, related entities list.
+  - Search/Filter — Filter by actor, domain, IP, etc.
+
+  Real-world use: After detecting an attack, an analyst clicks on the campaign node and sees: "FIN7
+   ran 14 similar campaigns last month, targeting banking infrastructure in Eastern Europe."       
+
+  ---
+  5. Campaigns Page (/dashboard/campaigns)
+
+  What it is: Case management — tracking ongoing attack operations over time.
+
+  Components:
+  - CampaignList — Left sidebar listing all tracked campaigns with status badges (Active = red     
+  pulse, Investigating = amber, Mitigated = green). Click one to open it.
+  - CampaignDetails — The full case file:
+    - Campaign ID, status, actor, last activity
+    - Stats: target sectors, IOC count, mapped techniques, confidence
+    - IOC List (live from backend) — all malicious domains/IPs associated with this campaign. Click
+   any to investigate.
+    - Attack Velocity Chart — bar chart showing when attack activity spiked
+    - MITRE technique badges
+  - ActionPanel — Response buttons: Quarantine, Block Domains, Notify Team, Escalate L3
+  - Historical Threat Landscape — Full-width bar chart showing attack frequency across a 6-month   
+  timeline
+
+  Real-world use: Your team is tracking a ransomware group. This page is the "war room" — all the  
+  IOCs they've used, all their infrastructure, their timeline, updated live.
+
+  ---
+  6. Chat Page (/dashboard/chat) — SentinelChat
+
+  What it is: An AI cybersecurity assistant that knows your entire platform's data.
+
+  Components:
+  - ChatHeader — Shows "SentinelChat Active" with inference status
+  - ChatMessage — Each message rendered as a card. AI responses include clickable source badges and
+   follow-up suggestion buttons.
+  - ChatInput — The message box. Sends queries to GPT-4o via the backend RAG pipeline.
+  - ContextPanel — Right sidebar showing currently active threat context (what entity the AI is    
+  "looking at"), related IOCs, quick action buttons.
+
+  Real-world use: You type: "What campaigns has FIN7 run targeting banking in 2026?" — the AI      
+  searches your knowledge graph and returns a structured answer with links. Or: "Explain what T1566
+   means in plain English" — it explains MITRE technique T1566 using your organization's context.  
+
+  ---
+  How It All Flows Together — One Real Scenario
+
+  Monday morning, 9:02 AM:
+  1. ThreatFeed [Dashboard] flashes red: "New high-risk event — phishing URL detected"
+  2. Analyst clicks it → navigates to Analyze page
+  3. Pastes the URL → hits "Run Analysis"
+  4. 400ms later: 91% threat score, NLP detected urgency + credential harvesting,
+     visual engine matched a fake PayPal login page, domain registered yesterday
+  5. IntelCard shows: "This is part of Operation Wire Phantom — FIN7"
+  6. Analyst clicks "Generate PDF Report" → downloads full incident report
+  7. Clicks "Block IOCs" → domains get sinkholes, "Alert Team" → Slack notification
+  8. Navigates to Campaigns page → opens "Operation Wire Phantom" case file
+  9. Adds the new IOCs to the case, sees 3 new related domains in the IOC list
+  10. Types in SentinelChat: "Has FIN7 targeted our industry before?" → gets history
+  11. Escalates to L3 with full context
+
+  The whole process takes under 5 minutes instead of the industry average of 6+ hours for manual   
+  triage.

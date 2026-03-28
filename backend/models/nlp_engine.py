@@ -9,7 +9,7 @@ import asyncio
 import logging
 from typing import Optional
 
-import httpx
+import requests
 
 from config import OPENROUTER_API_KEY, OPENROUTER_FAST_MODEL
 
@@ -86,12 +86,14 @@ OBFUSCATION_PATTERNS = [
 PHISHING_ANALYSIS_PROMPT = """You are an expert cybersecurity analyst specialized in phishing and social engineering detection.
 
 Analyze the following email/text content for phishing indicators. Return ONLY a valid JSON object with these exact fields:
-{
-  "intent_score": <float 0.0-1.0, where 0.0=definitely legitimate, 1.0=definitely phishing>,
-  "detected_tactics": <list of strings, ONLY from: ["urgency","authority_impersonation","financial_lure","credential_harvesting","suspicious_link","fear_threat","spoofing","reward_framing","bec_pattern","executive_impersonation"]>,
-  "confidence": <float 0.0-1.0, your confidence in this classification>,
-  "explanation": "<2-3 sentences explaining the specific phishing indicators found, or why it appears legitimate>"
-}
+{{
+  "intent_score": <float 0.0-1.0>,
+  "detected_tactics": <list of strings from: ["urgency","authority_impersonation","financial_lure","credential_harvesting","suspicious_link","fear_threat","spoofing","reward_framing","bec_pattern","executive_impersonation"]>,
+  "confidence": <float 0.0-1.0>,
+  "explanation": "<2-3 sentence explanation>",
+  "top_phrases": <list of suspicious phrases>,
+  "phishing_intent": "<concise description of goal>"
+}}
 
 Key guidance:
 - Urgency: time pressure, account suspension threats, "act now" language
@@ -123,7 +125,7 @@ async def analyze_text_llm(text: str) -> dict:
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://sentinelai.fusion",
-        "X-Title": "SentinelAI Fusion",
+        "X-OpenRouter-Title": "SentinelAI Fusion",
     }
 
     payload = {
@@ -139,17 +141,29 @@ async def analyze_text_llm(text: str) -> dict:
         "response_format": {"type": "json_object"},
     }
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.post(
-            "https://openrouter.ai/api/v1/chat/completions",
+    def _call():
+        response = requests.post(
+            url="https://openrouter.ai/api/v1/chat/completions",
             headers=headers,
-            json=payload,
+            data=json.dumps(payload),
         )
         response.raise_for_status()
-        data = response.json()
+        return response.json()
+
+    data = await asyncio.to_thread(_call)
 
     raw_content = data["choices"][0]["message"]["content"]
-    result = json.loads(raw_content)
+
+    try:
+        result = json.loads(raw_content.strip())
+    except json.JSONDecodeError:
+        # Fallback: strip markdown code blocks and retry
+        cleaned = _clean_llm_json(raw_content)
+        try:
+            result = json.loads(cleaned)
+        except Exception as e:
+            logger.error(f"[NLP] JSON parse failed. Raw content: {raw_content[:200]!r}")
+            raise e
 
     # Validate and clamp
     intent_score = float(result.get("intent_score", 0.1))
@@ -161,6 +175,8 @@ async def analyze_text_llm(text: str) -> dict:
     tactics_raw = result.get("detected_tactics", [])
     detected_tactics = []
     for t in tactics_raw:
+        if not isinstance(t, str): continue
+        t = t.strip().lower().replace(" ", "_")
         if t in TACTIC_MITRE_MAP:
             detected_tactics.append({
                 "name": t.replace("_", " ").title(),
@@ -173,6 +189,8 @@ async def analyze_text_llm(text: str) -> dict:
         "confidence": round(confidence, 4),
         "detected_tactics": detected_tactics,
         "explanation": result.get("explanation", ""),
+        "top_phrases": result.get("top_phrases", [])[:5],
+        "phishing_intent": result.get("phishing_intent", ""),
         "feature_contributions": {t: TACTIC_MITRE_MAP[t]["weight"] for t in tactics_raw if t in TACTIC_MITRE_MAP},
         "source": "openrouter_gpt4o_mini",
     }
@@ -229,11 +247,40 @@ def analyze_text_heuristic(text: str) -> dict:
     tactic_names = [t["name"] for t in detected]
     explanation = _build_heuristic_explanation(score, tactic_names, url_count)
 
+    # Extract concrete phrases that matched
+    top_phrases = []
+    for tactic_name, patterns in TACTIC_PATTERNS.items():
+        for pat in patterns:
+            matches = re.findall(pat, text[:2000], re.IGNORECASE)
+            for m in matches[:2]:
+                phrase = m if isinstance(m, str) else m[0]
+                if phrase and len(phrase) > 3 and phrase not in top_phrases:
+                    top_phrases.append(phrase.strip())
+                if len(top_phrases) >= 5:
+                    break
+            if len(top_phrases) >= 5:
+                break
+
+    phishing_intent = ""
+    if tactic_names:
+        if "Bec Pattern" in tactic_names or "Executive Impersonation" in tactic_names:
+            phishing_intent = "BEC wire transfer fraud — impersonating executive to redirect funds"
+        elif "Credential Harvesting" in tactic_names:
+            phishing_intent = "Credential harvesting — trick victim into entering login details on fake page"
+        elif "Authority Impersonation" in tactic_names:
+            phishing_intent = "Authority impersonation — gain trust by posing as trusted organization"
+        elif "Financial Lure" in tactic_names:
+            phishing_intent = "Financial lure — entice victim with payment or refund to steal data"
+        elif "Urgency" in tactic_names:
+            phishing_intent = "Urgency manipulation — pressure victim into acting without verification"
+
     return {
         "score": score,
         "confidence": confidence,
         "detected_tactics": detected,
         "explanation": explanation,
+        "top_phrases": top_phrases[:5],
+        "phishing_intent": phishing_intent,
         "feature_contributions": feature_contributions,
         "url_count": url_count,
         "source": "heuristic_fallback",
@@ -268,6 +315,21 @@ def _build_heuristic_explanation(score: float, tactic_names: list, url_count: in
     elif score > 0.5:
         base += f" Confidence: MEDIUM ({round(score * 100, 1)}%). Manual review recommended."
     return base
+
+
+def _clean_llm_json(text: str) -> str:
+    """Helper to extract JSON from a potentially messy LLM output."""
+    # Find the indices of the first '{' and the last '}'
+    start = text.find('{')
+    end = text.rfind('}')
+    
+    if start != -1 and end != -1 and end > start:
+        return text[start:end+1]
+    
+    # Generic cleanup as fallback
+    text = re.sub(r"```(?:json)?\s*", "", text)
+    text = re.sub(r"\s*```", "", text)
+    return text.strip()
 
 
 async def analyze_text(text: str, input_type: str = "email") -> dict:

@@ -168,7 +168,7 @@ export function CampaignDetails({ id, type, risk, status, actor, time }: Campaig
           </CardContent>
        </Card>
 
-       <ActionPanel />
+       <ActionPanel campaign={campaign} />
     </div>
   )
 }

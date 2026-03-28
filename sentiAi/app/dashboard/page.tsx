@@ -5,7 +5,7 @@ import Link from "next/link"
 import {
   ShieldAlert, ShieldCheck, Zap, Clock, Search,
   TrendingUp, Mail, Globe, ArrowRight, CheckCircle,
-  AlertTriangle, Inbox, Eye, Upload, BarChart2
+  AlertTriangle, Inbox, Eye, Upload, BarChart2, Cpu, Target
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,30 @@ import { ThreatFeed } from "@/components/dashboard/ThreatFeed"
 import { ThreatTimeline } from "@/components/dashboard/ThreatTimeline"
 import { RiskDonut } from "@/components/dashboard/RiskDonut"
 import { motion } from "framer-motion"
+
+interface ModelScore {
+  accuracy: number
+  f1_score: number
+  roc_auc: number
+  precision: number
+  recall: number
+  eval_set_size?: number
+  test_set_size?: number
+  train_set_size?: number
+  model?: string
+  architecture?: string
+}
+
+interface ModelMetrics {
+  evaluation?: {
+    url_classifier_xgboost?: ModelScore
+    nlp_bert_phishing?: ModelScore
+    // legacy key
+    url_classifier?: ModelScore
+    ensemble_architecture?: { layers: { name: string; models: string[]; weight_in_fusion: number | string }[] }
+  }
+  live_counters?: { total_analyzed: number; threats_detected: number }
+}
 
 interface Stats {
   total_analyses: number
@@ -44,6 +68,7 @@ const itemVariants = {
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null)
   const [historyStats, setHistoryStats] = useState<Stats | null>(null)
+  const [modelMetrics, setModelMetrics] = useState<ModelMetrics | null>(null)
   const [quickInput, setQuickInput] = useState("")
   const [quickLoading, setQuickLoading] = useState(false)
   const [quickResult, setQuickResult] = useState<{ verdict: string; score: number } | null>(null)
@@ -52,12 +77,14 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [mResp, sResp] = await Promise.all([
+        const [mResp, sResp, mmResp] = await Promise.all([
           fetch("/api/v1/dashboard/metrics"),
           fetch("/api/v1/history/stats"),
+          fetch("/api/v1/metrics"),
         ])
         if (mResp.ok) setMetrics(await mResp.json())
         if (sResp.ok) setHistoryStats(await sResp.json())
+        if (mmResp.ok) setModelMetrics(await mmResp.json())
       } catch { }
     }
     loadData()
@@ -214,6 +241,87 @@ export default function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* Model Performance Metrics */}
+      {(modelMetrics?.evaluation?.url_classifier_xgboost || modelMetrics?.evaluation?.url_classifier || modelMetrics?.evaluation?.nlp_bert_phishing) && (() => {
+        const xgb = modelMetrics.evaluation!.url_classifier_xgboost || modelMetrics.evaluation!.url_classifier
+        const bert = modelMetrics.evaluation!.nlp_bert_phishing
+        const metricCols = (m: ModelScore | undefined, colorSet: string[]) => m ? [
+          { label: "F1", value: m.f1_score.toFixed(3), color: colorSet[0] },
+          { label: "AUC", value: m.roc_auc.toFixed(3), color: colorSet[1] },
+          { label: "Acc", value: `${(m.accuracy * 100).toFixed(0)}%`, color: colorSet[2] },
+          { label: "Prec", value: m.precision.toFixed(3), color: colorSet[3] },
+          { label: "Rec", value: m.recall.toFixed(3), color: colorSet[4] },
+        ] : []
+        return (
+          <Card className="card-cyber p-5 border-t-2 border-t-emerald-500/30 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5"><Cpu className="h-24 w-24 text-emerald-400" /></div>
+            <div className="relative z-10 space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                    <Cpu className="h-4 w-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-tight text-foreground">Model Performance Metrics</h3>
+                    <p className="text-[8px] text-slate-600 uppercase font-bold tracking-widest">Held-out benchmark evaluation — not seen during training</p>
+                  </div>
+                </div>
+                <Badge className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] h-5 px-2 uppercase font-bold tracking-widest">
+                  Production Ensemble
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* XGBoost URL Classifier */}
+                {xgb && (
+                  <div className="p-4 rounded-xl bg-white/3 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-blue-400">XGBoost URL Classifier</span>
+                      <span className="text-[7px] text-slate-600 uppercase">train={xgb.train_set_size} / test={xgb.test_set_size}</span>
+                    </div>
+                    <div className="grid grid-cols-5 gap-2">
+                      {metricCols(xgb, ["text-emerald-400","text-blue-400","text-purple-400","text-amber-400","text-red-400"]).map(m => (
+                        <div key={m.label} className="text-center">
+                          <p className={cn("text-lg font-black font-mono tracking-tighter", m.color)}>{m.value}</p>
+                          <p className="text-[7px] text-slate-600 uppercase font-bold">{m.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[7px] text-slate-600 uppercase font-bold">31 URL features · Rule engine + ML blend</p>
+                  </div>
+                )}
+
+                {/* BERT Phishing Model */}
+                {bert && !("error" in bert) && (
+                  <div className="p-4 rounded-xl bg-white/3 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">BERT Phishing Detector</span>
+                      <span className="text-[7px] text-slate-600 uppercase">eval={bert.eval_set_size} samples</span>
+                    </div>
+                    <div className="grid grid-cols-5 gap-2">
+                      {metricCols(bert, ["text-emerald-400","text-blue-400","text-purple-400","text-amber-400","text-red-400"]).map(m => (
+                        <div key={m.label} className="text-center">
+                          <p className={cn("text-lg font-black font-mono tracking-tighter", m.color)}>{m.value}</p>
+                          <p className="text-[7px] text-slate-600 uppercase font-bold">{m.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[7px] text-slate-600 uppercase font-bold">Fine-tuned on ISCX-2016 · GPT 55% + BERT 45% ensemble</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 pt-1 border-t border-white/5">
+                <Target className="h-3 w-3 text-emerald-400 shrink-0" />
+                <span className="text-[8px] text-slate-500 uppercase font-bold">
+                  5-Layer Ensemble: NLP(GPT+BERT) · URL(XGBoost+Rules) · Visual(CLIP) · Header(SPF/DKIM) · Intel(URLhaus+OTX)
+                </span>
+              </div>
+            </div>
+          </Card>
+        )
+      })()}
 
       {/* Charts + Feed Row */}
       <div className="grid grid-cols-12 gap-6">

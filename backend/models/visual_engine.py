@@ -69,19 +69,24 @@ async def take_screenshot(url: str) -> Optional[dict]:
 
     def _sync_run() -> Optional[bytes]:
         import requests as _req
+        import json as _json
         from apify_client import ApifyClient
 
         client = ApifyClient(APIFY_API_TOKEN)
 
+        # Use "domcontentloaded" instead of "networkidle0":
+        # - Captures the page (or auth-redirect/login wall) as soon as DOM is ready
+        # - Phishing pages load immediately; auth-required pages show the login redirect
+        # - networkidle0 hangs waiting for all XHR/WS traffic on complex apps (Docs, Drive, etc.)
         run_input = {
             "fullPage": False,
             "enableSSL": True,
             "linkUrls": [url],
             "outputFormat": "jpeg",
-            "waitUntil": "networkidle0",
-            "timeouT": 15,
-            "maxRetries": 3,
-            "delayBeforeScreenshot": 1500,
+            "waitUntil": "domcontentloaded",   # capture immediately — don't wait for network idle
+            "timeouT": 8,                       # 8s per attempt (was 15s × 3 retries = 45s wasted)
+            "maxRetries": 1,                    # 1 retry max — fail fast, fall back to URL estimation
+            "delayBeforeScreenshot": 600,       # short delay after DOM ready
             "infiniteScroll": False,
             "timefullPagE": 10,
             "frameCounT": 15,
@@ -94,73 +99,150 @@ async def take_screenshot(url: str) -> Optional[dict]:
             "righT": 0,
             "bottoM": 0,
             "lefT": 0,
-            "device": None,
             "window_Width": 1920,
             "window_Height": 1080,
             "scrollToBottom": False,
-            "delayAfterScrolling": 300,
+            "delayAfterScrolling": 0,
             "cookies": [],
             "proxyConfig": {"useApifyProxy": False},
         }
 
-        run = client.actor("FU5kPkREa2rdypuqb").call(run_input=run_input, timeout_secs=60)
+        run = client.actor("FU5kPkREa2rdypuqb").call(run_input=run_input, timeout_secs=35)
+        logger.info(f"[Visual] Actor run result: status={run.get('status') if run else None}, "
+                    f"datasetId={run.get('defaultDatasetId') if run else None}, "
+                    f"kvStoreId={run.get('defaultKeyValueStoreId') if run else None}")
+
         if not run or run.get("status") != "SUCCEEDED":
-            logger.warning(f"[Visual] Apify actor run ended: {run.get('status') if run else 'None'}")
+            logger.warning(f"[Visual] Run did not succeed: {run}")
             return None
 
-        # Results are in the dataset — iterate items to find the screenshot
+        # ── Dump raw dataset items for debugging ──────────────────────────────
         dataset_id = run.get("defaultDatasetId")
         if not dataset_id:
             logger.warning("[Visual] No defaultDatasetId in run result")
             return None
 
-        for item in client.dataset(dataset_id).iterate_items():
-            # The actor stores the screenshot as a URL in one of these fields
-            img_url = (
-                item.get("screenshotUrl")
-                or item.get("screenshot")
-                or item.get("imageUrl")
-                or item.get("url")  # some actors store direct CDN URL here
-            )
+        items = list(client.dataset(dataset_id).iterate_items())
+        logger.info(f"[Visual] Dataset has {len(items)} item(s)")
 
-            # If value is a base64 data URL already, decode it directly
-            if isinstance(img_url, str) and img_url.startswith("data:image"):
-                try:
-                    header, b64data = img_url.split(",", 1)
-                    raw = base64.b64decode(b64data)
+        for idx, item in enumerate(items):
+            # Log all keys and non-binary values so we can see the schema
+            safe = {
+                k: (f"<bytes {len(v)}>" if isinstance(v, (bytes, bytearray)) else
+                    (v[:120] if isinstance(v, str) and len(v) > 120 else v))
+                for k, v in item.items()
+            }
+            logger.info(f"[Visual] Dataset item[{idx}] keys/values: {_json.dumps(safe, default=str)}")
+
+        # ── Try to extract image from every known field pattern ───────────────
+        for item in items:
+            # Walk every key — look for anything that is or points to an image
+            for key, val in item.items():
+                # Raw bytes in the item
+                if isinstance(val, (bytes, bytearray)):
+                    raw = bytes(val)
                     if _is_valid_image(raw):
+                        logger.info(f"[Visual] Found valid image bytes in item['{key}'] ({len(raw)} bytes)")
                         return raw
-                except Exception:
-                    pass
-                continue
 
-            # Otherwise fetch the image from the URL
-            if isinstance(img_url, str) and img_url.startswith("http"):
+                if not isinstance(val, str):
+                    continue
+
+                # base64 data URL
+                if val.startswith("data:image"):
+                    try:
+                        _, b64data = val.split(",", 1)
+                        raw = base64.b64decode(b64data)
+                        if _is_valid_image(raw):
+                            logger.info(f"[Visual] Decoded base64 image from item['{key}'] ({len(raw)} bytes)")
+                            return raw
+                    except Exception:
+                        pass
+
+                # HTTP URL — fetch it
+                if val.startswith("http"):
+                    try:
+                        resp = _req.get(val, timeout=15, allow_redirects=True)
+                        logger.info(f"[Visual] Fetched item['{key}'] URL → HTTP {resp.status_code}, "
+                                    f"Content-Type={resp.headers.get('content-type','?')}, "
+                                    f"size={len(resp.content)}")
+                        if resp.status_code == 200 and _is_valid_image(resp.content):
+                            return resp.content
+                        # Save whatever came back for manual inspection
+                        _save_debug_file(resp.content, f"debug_fetch_{key}.bin")
+                    except Exception as fe:
+                        logger.warning(f"[Visual] Fetch failed for item['{key}']={val[:80]}: {fe}")
+
+        # ── Also check key-value store (some actors write there too) ──────────
+        kv_id = run.get("defaultKeyValueStoreId")
+        if kv_id:
+            kv = client.key_value_store(kv_id)
+            for key in ("OUTPUT", "screenshot", "screenshot.jpg", "screenshot.jpeg", "screenshot.png"):
                 try:
-                    resp = _req.get(img_url, timeout=15, allow_redirects=True)
-                    if resp.status_code == 200 and _is_valid_image(resp.content):
-                        return resp.content
-                except Exception as fetch_err:
-                    logger.debug(f"[Visual] Image fetch failed for {img_url}: {fetch_err}")
+                    record = kv.get_record(key)
+                    if not record:
+                        continue
+                    val = record.get("value")
+                    logger.info(f"[Visual] KV['{key}']: type={type(val).__name__}, "
+                                f"size={len(val) if isinstance(val, (bytes, bytearray, str)) else 'N/A'}")
+                    if isinstance(val, (bytes, bytearray)) and _is_valid_image(bytes(val)):
+                        return bytes(val)
+                    if isinstance(val, str) and val.startswith("data:image"):
+                        _, b64data = val.split(",", 1)
+                        raw = base64.b64decode(b64data)
+                        if _is_valid_image(raw):
+                            return raw
+                    if isinstance(val, str) and val.startswith("http"):
+                        resp = _req.get(val, timeout=15, allow_redirects=True)
+                        if resp.status_code == 200 and _is_valid_image(resp.content):
+                            return resp.content
+                except Exception as kv_err:
+                    logger.debug(f"[Visual] KV['{key}'] error: {kv_err}")
 
-            # Some actors embed the image bytes directly as a buffer field
-            if isinstance(img_url, (bytes, bytearray)) and _is_valid_image(bytes(img_url)):
-                return bytes(img_url)
-
-        logger.warning("[Visual] No valid screenshot found in dataset items")
+        logger.warning("[Visual] Could not extract a valid image from run output")
         return None
 
     try:
         img_bytes = await asyncio.to_thread(_sync_run)
         if img_bytes and _is_valid_image(img_bytes):
-            mime = "image/png" if img_bytes[:4] == b"\x89PNG" else "image/jpeg"
-            b64 = base64.b64encode(img_bytes).decode()
-            logger.info(f"[Visual] Screenshot captured: {len(img_bytes)} bytes ({mime})")
-            return {"bytes": img_bytes, "data_url": f"data:{mime};base64,{b64}"}
+            # Save to disk; serve via /screenshots/ static mount
+            local_path = _save_screenshot_local(img_bytes)
+            filename = os.path.basename(local_path)
+            screenshot_path = f"/screenshots/{filename}"   # relative to backend root
+            logger.info(f"[Visual] Screenshot saved: {local_path} ({len(img_bytes)} bytes)")
+            return {
+                "bytes": img_bytes,
+                "screenshot_path": screenshot_path,   # served as static file
+                "local_path": local_path,
+            }
     except Exception as e:
-        logger.warning(f"[Visual] Screenshot failed: {e}")
+        logger.warning(f"[Visual] Screenshot failed: {e}", exc_info=True)
 
     return None
+
+
+def _save_screenshot_local(img_bytes: bytes) -> str:
+    """Save screenshot bytes to backend/data/screenshots/ and return the file path."""
+    import time as _time
+    screenshots_dir = os.path.join(os.path.dirname(__file__), "..", "data", "screenshots")
+    os.makedirs(screenshots_dir, exist_ok=True)
+    ext = "png" if img_bytes[:4] == b"\x89PNG" else "jpg"
+    filename = f"screenshot_{int(_time.time() * 1000)}.{ext}"
+    filepath = os.path.join(screenshots_dir, filename)
+    with open(filepath, "wb") as f:
+        f.write(img_bytes)
+    return filepath
+
+
+def _save_debug_file(data: bytes, filename: str):
+    """Save any raw response for manual inspection."""
+    try:
+        debug_dir = os.path.join(os.path.dirname(__file__), "..", "data", "screenshots")
+        os.makedirs(debug_dir, exist_ok=True)
+        with open(os.path.join(debug_dir, filename), "wb") as f:
+            f.write(data)
+    except Exception:
+        pass
 
 
 async def get_clip_embedding(image_bytes: bytes) -> Optional[list]:
@@ -285,7 +367,7 @@ async def analyze_visual(url: str, url_features: dict = None) -> dict:
 
         if screenshot:
             img_bytes = screenshot["bytes"]
-            screenshot_data_url = screenshot["data_url"]
+            screenshot_path = screenshot.get("screenshot_path")
 
             # URL-based brand estimation (boosted by real screenshot confirmation)
             url_est = estimate_visual_from_url(url, url_features)
@@ -305,7 +387,7 @@ async def analyze_visual(url: str, url_features: dict = None) -> dict:
                 "similarity": round(score, 4),
                 "heatmap": url_est["heatmap"],
                 "screenshot_captured": True,
-                "screenshot_url": screenshot_data_url,
+                "screenshot_path": screenshot_path,   # /screenshots/filename.jpg
                 "source": "apify_screenshot",
             }
 

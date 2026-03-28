@@ -334,7 +334,10 @@ def _clean_llm_json(text: str) -> str:
 
 async def analyze_text(text: str, input_type: str = "email") -> dict:
     """
-    Main entry point. Tries OpenRouter LLM first, falls back to heuristics.
+    Main entry point.
+    Runs GPT-4o-mini + BERT phishing model in parallel.
+    Averages their scores for reproducible, measurable accuracy.
+    Falls back gracefully when either is unavailable.
     """
     if not text or len(text.strip()) < 5:
         return {
@@ -342,10 +345,83 @@ async def analyze_text(text: str, input_type: str = "email") -> dict:
             "explanation": "No content provided.", "feature_contributions": {},
         }
 
+    # ── Run GPT-4o-mini and BERT in parallel ─────────────────────────────────
     try:
-        result = await analyze_text_llm(text)
-        logger.info(f"[NLP] OpenRouter GPT-4o-mini: score={result['score']}, tactics={[t['name'] for t in result['detected_tactics']]}")
-        return result
+        from models.bert_phishing_model import predict as bert_predict
+        gpt_task = asyncio.create_task(analyze_text_llm(text))
+        bert_task = asyncio.create_task(bert_predict(text))
+        gpt_result, bert_result = await asyncio.gather(gpt_task, bert_task, return_exceptions=True)
+    except ImportError:
+        # BERT not available — run GPT only
+        gpt_result = await _run_gpt_safe(text)
+        bert_result = None
+
+    # ── Resolve GPT result ────────────────────────────────────────────────────
+    if isinstance(gpt_result, Exception):
+        logger.warning(f"[NLP] GPT-4o-mini failed: {gpt_result}")
+        gpt_result = None
+    if isinstance(bert_result, Exception):
+        logger.warning(f"[NLP] BERT failed: {bert_result}")
+        bert_result = None
+
+    # ── Both available: ensemble average ─────────────────────────────────────
+    if gpt_result and bert_result and bert_result.get("phishing_prob", -1) >= 0:
+        gpt_score = gpt_result["score"]
+        bert_prob = bert_result["phishing_prob"]
+
+        # Weighted average: GPT-4o-mini 55%, BERT 45%
+        ensemble_score = round(gpt_score * 0.55 + bert_prob * 0.45, 4)
+        ensemble_score = max(0.02, min(0.98, ensemble_score))
+
+        # Boost confidence when both models agree
+        gpt_conf = gpt_result.get("confidence", 0.7)
+        agreement = 1.0 - abs(gpt_score - bert_prob)  # 0=disagree, 1=perfect agreement
+        ensemble_conf = round(min(gpt_conf * 0.7 + agreement * 0.3, 0.99), 4)
+
+        logger.info(
+            f"[NLP] Ensemble: GPT={gpt_score:.3f} BERT={bert_prob:.3f} "
+            f"→ avg={ensemble_score:.3f} agreement={agreement:.2f}"
+        )
+
+        return {
+            **gpt_result,
+            "score": ensemble_score,
+            "confidence": ensemble_conf,
+            "gpt_score": gpt_score,
+            "bert_score": bert_prob,
+            "bert_label": bert_result.get("label"),
+            "source": "ensemble_gpt4o_mini_bert",
+        }
+
+    # ── Only GPT available ────────────────────────────────────────────────────
+    if gpt_result:
+        logger.info(f"[NLP] GPT-4o-mini only: score={gpt_result['score']}")
+        return gpt_result
+
+    # ── Only BERT available ───────────────────────────────────────────────────
+    if bert_result and bert_result.get("phishing_prob", -1) >= 0:
+        bert_prob = bert_result["phishing_prob"]
+        logger.info(f"[NLP] BERT only: prob={bert_prob:.3f}")
+        heuristic = analyze_text_heuristic(text)
+        # Blend BERT with heuristic
+        blended = round(bert_prob * 0.65 + heuristic["score"] * 0.35, 4)
+        return {
+            **heuristic,
+            "score": blended,
+            "bert_score": bert_prob,
+            "bert_label": bert_result.get("label"),
+            "source": "bert_heuristic_blend",
+        }
+
+    # ── Full fallback: heuristics ─────────────────────────────────────────────
+    logger.warning("[NLP] All models unavailable, using heuristics")
+    return analyze_text_heuristic(text)
+
+
+async def _run_gpt_safe(text: str):
+    """Run GPT-4o-mini, returning None on failure instead of raising."""
+    try:
+        return await analyze_text_llm(text)
     except Exception as e:
-        logger.warning(f"[NLP] OpenRouter unavailable ({e}), using heuristic fallback")
-        return analyze_text_heuristic(text)
+        logger.warning(f"[NLP] GPT-4o-mini unavailable: {e}")
+        return None

@@ -1,13 +1,12 @@
 "use client"
 
 import React from "react"
-import { 
-  ShieldCheck, 
-  Menu, 
-  Search, 
-  Bell, 
-  Command,
-  Zap,
+import {
+  ShieldCheck,
+  Menu,
+  Search,
+  Bell,
+  Camera,
   PanelLeftOpen,
   PanelLeftClose,
   Filter,
@@ -25,6 +24,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Sidebar } from "./Sidebar"
 import { cn } from "@/lib/utils"
+import { useGlobalStore } from "@/lib/global-store"
 
 interface HeaderProps {
   sidebarCollapsed: boolean
@@ -32,6 +32,8 @@ interface HeaderProps {
 }
 
 export function Header({ sidebarCollapsed, setSidebarCollapsed }: HeaderProps) {
+  const { visualSandboxEnabled, setVisualSandboxEnabled } = useGlobalStore()
+
   return (
     <header className="h-14 w-full flex items-center justify-between px-4 md:px-6 bg-[#0d1117]/80 backdrop-blur-sm border-b border-blue-500/8 relative z-40">
       <div className="flex items-center space-x-4">
@@ -82,6 +84,30 @@ export function Header({ sidebarCollapsed, setSidebarCollapsed }: HeaderProps) {
             <kbd className="text-[8px] bg-accent/20 text-accent font-black px-1.5 py-0.5 rounded border border-accent/20">K</kbd>
           </div>
         </div>
+
+        {/* Visual Sandbox global toggle */}
+        <button
+          onClick={() => setVisualSandboxEnabled(!visualSandboxEnabled)}
+          title={visualSandboxEnabled ? "Visual Sandbox ON — screenshots captured globally" : "Visual Sandbox OFF — click to enable globally"}
+          className={cn(
+            "hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-widest transition-all",
+            visualSandboxEnabled
+              ? "bg-purple-500/15 border-purple-500/30 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.15)]"
+              : "bg-white/3 border-white/8 text-slate-500 hover:border-white/20 hover:text-slate-400"
+          )}
+        >
+          <Camera className={cn("h-3.5 w-3.5", visualSandboxEnabled ? "text-purple-400" : "text-slate-600")} />
+          <span className="hidden xl:inline">Visual Sandbox</span>
+          <span className={cn(
+            "h-3.5 w-6 rounded-full flex items-center transition-all flex-shrink-0",
+            visualSandboxEnabled ? "bg-purple-500/50" : "bg-white/10"
+          )}>
+            <span className={cn(
+              "h-2.5 w-2.5 rounded-full transition-all mx-0.5",
+              visualSandboxEnabled ? "bg-purple-300" : "bg-slate-600"
+            )} style={{ transform: visualSandboxEnabled ? "translateX(10px)" : "translateX(0)" }} />
+          </span>
+        </button>
 
         <div className="flex items-center space-x-1 md:space-x-2 border-l border-white/5 pl-4 md:pl-6 h-10">
           <DropdownMenu>

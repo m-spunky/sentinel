@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { getKnowledgeGraph, type GraphData, type GraphNode } from "@/lib/api"
 
+interface GraphViewProps {
+  onNodeSelect?: (node: GraphNode | null) => void
+}
+
 // Node colors matching backend spec
 const NODE_COLORS: Record<string, string> = {
   actor: "#ef4444",
@@ -39,7 +43,7 @@ interface SimLink {
   relationship: string
 }
 
-export function GraphView() {
+export function GraphView({ onNodeSelect }: GraphViewProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [graphData, setGraphData] = useState<GraphData | null>(null)
@@ -48,6 +52,8 @@ export function GraphView() {
   const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 })
   const simulationRef = useRef<ReturnType<typeof import("d3").forceSimulation> | null>(null)
   const [filterType, setFilterType] = useState<string | null>(null)
+  const onNodeSelectRef = useRef(onNodeSelect)
+  onNodeSelectRef.current = onNodeSelect
 
   // Load graph data
   const loadGraph = useCallback(async () => {
@@ -162,7 +168,10 @@ export function GraphView() {
               d.fy = null
             })
         )
-        .on("click", (_, d) => setSelectedNode(d))
+        .on("click", (_, d) => {
+          setSelectedNode(d)
+          onNodeSelectRef.current?.(d)
+        })
 
       // Node circles
       node.append("circle")
@@ -317,29 +326,20 @@ export function GraphView() {
           </Button>
         </div>
 
-        {/* Selected node panel */}
+        {/* Click hint */}
+        {!selectedNode && !loading && (
+          <div className="absolute bottom-4 right-4 px-3 py-2 rounded-lg bg-[#0a0e1a]/80 border border-blue-500/10 backdrop-blur-sm z-20">
+            <span className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Click any node to inspect →</span>
+          </div>
+        )}
+        {/* Selected indicator */}
         {selectedNode && (
-          <div className="absolute bottom-4 right-4 w-64 p-4 rounded-lg bg-[#111827]/90 border border-blue-500/20 backdrop-blur-sm z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: NODE_COLORS[selectedNode.type] || "#3b82f6" }} />
-                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: NODE_COLORS[selectedNode.type] }}>
-                  {selectedNode.type}
-                </span>
-              </div>
-              <button onClick={() => setSelectedNode(null)} className="text-slate-500 hover:text-slate-300 text-xs">✕</button>
-            </div>
-            <h3 className="text-sm font-bold text-slate-200 truncate mb-2">{selectedNode.label}</h3>
-            {selectedNode.data && (
-              <div className="space-y-1">
-                {Object.entries(selectedNode.data).slice(0, 4).map(([k, v]) => (
-                  <div key={k} className="flex justify-between text-[9px]">
-                    <span className="text-slate-500 uppercase">{k.replace(/_/g, " ")}</span>
-                    <span className="text-slate-300 truncate ml-2 max-w-[120px]">{String(v)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="absolute bottom-4 right-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-[#111827]/90 border z-20 animate-in fade-in duration-150"
+               style={{ borderColor: (NODE_COLORS[selectedNode.type] || "#3b82f6") + "40" }}>
+            <div className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: NODE_COLORS[selectedNode.type] || "#3b82f6" }} />
+            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-300 max-w-[140px] truncate">{selectedNode.label}</span>
+            <button onClick={() => { setSelectedNode(null); onNodeSelectRef.current?.(null) }}
+                    className="text-slate-500 hover:text-slate-300 text-[10px] ml-1">✕</button>
           </div>
         )}
       </CardContent>

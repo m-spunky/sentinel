@@ -8,7 +8,7 @@ Multi-layered AI-powered cyber threat intelligence and defense platform.
 D:/Projects/Sentinel/
 ├── backend/          # FastAPI Python backend
 │   ├── main.py       # FastAPI app entry point
-│   ├── models/       # Analysis engines (NLP, URL, Header, Fusion)
+│   ├── models/       # Analysis so buildengines (NLP, URL, Header, Fusion)
 │   ├── intelligence/ # Threat knowledge graph (NetworkX)
 │   ├── chat/         # SentinelChat (Claude API)
 │   └── routers/      # API route handlers

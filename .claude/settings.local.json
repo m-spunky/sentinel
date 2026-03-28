@@ -23,7 +23,22 @@
       "Bash(/dev/null sleep:*)",
       "Bash(/dev/null:*)",
       "Bash(python3 -c \":*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(curl -s http://localhost:8001/api/v1/gmail/status)",
+      "Bash(curl -s http://localhost:8001/api/v1/gmail/inbox?risk_filter=ALL)",
+      "Bash(taskkill /F /IM python.exe)",
+      "Bash(cmd /c \"taskkill /F /IM python.exe\")",
+      "Bash(cmd /c \"netstat -ano | findstr :8001\")",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c \"taskkill /PID 67084 /F\")",
+      "Bash(powershell -Command \"Stop-Process -Id 67084 -Force\")",
+      "Bash(powershell -Command \"Get-Process -Id 67084 | Select-Object Name, Id, Path\")",
+      "Bash(powershell -Command \"Get-Process python* | Select-Object Id, Name, CPU | Format-Table\")",
+      "Bash(powershell -Command \"Stop-Process -Id 53936 -Force\")",
+      "Bash(curl:*)",
+      "Bash(python -c \"from models.attachment_analyzer import analyze_attachment_bytes, analyze_attachments_with_bytes, _CONTENT_SCAN_EXTS; print\\(''OK — content scan exts:'', len\\(_CONTENT_SCAN_EXTS\\)\\)\")",
+      "Bash(python -m py_compile \"D:/Projects/Sentinel/backend/chat/sentinel_chat.py\")",
+      "Bash(python:*)"
     ]
   }
 }

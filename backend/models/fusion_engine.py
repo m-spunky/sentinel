@@ -137,12 +137,15 @@ def fuse_scores(
                 "weight": weights["nlp"],
                 "tactics": [t["name"] for t in nlp_result.get("detected_tactics", [])],
                 "explanation": nlp_result.get("explanation", ""),
+                "top_phrases": nlp_result.get("top_phrases", []),
+                "phishing_intent": nlp_result.get("phishing_intent", ""),
             },
             "url": {
                 "score": round(url_score, 4),
                 "weight": weights["url"],
                 "top_features": top_url_features,
                 "shap_values": url_result.get("shap_values", {}),
+                "features": url_result.get("features", {}),
             },
             "visual": {
                 "score": round(visual_score, 4),

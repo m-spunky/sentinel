@@ -9,9 +9,21 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "SentinelAI Fusion | Intelligence Platform",
-  description: "Unified Cyber Threat Intelligence Platform. Detect, analyze, and respond to threats using multi-modal AI.",
+  title: "SentinelAI Fusion | Phishing Detection Platform",
+  description: "AI-powered phishing detection. Detect, analyze and respond to email threats in real time.",
 };
+
+// Inline script: read saved theme before first paint to prevent flash
+const themeScript = `
+(function(){
+  try {
+    var t = localStorage.getItem('sentinel-theme') || 'dark';
+    document.documentElement.classList.add(t);
+  } catch(e) {
+    document.documentElement.classList.add('dark');
+  }
+})();
+`;
 
 export default function RootLayout({
   children,
@@ -19,8 +31,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${poppins.variable} dark`} suppressHydrationWarning>
-      <body className="min-h-screen w-full bg-black text-[#E0E1DD] selection:bg-accent/30 selection:text-accent font-sans antialiased overflow-x-hidden">
+    <html lang="en" className={poppins.variable} suppressHydrationWarning>
+      <head>
+        {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className="min-h-screen w-full selection:bg-blue-500/20 selection:text-blue-300 font-sans antialiased overflow-x-hidden">
         {children}
       </body>
     </html>

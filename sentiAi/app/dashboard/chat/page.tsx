@@ -19,12 +19,12 @@ interface Message {
 const INITIAL_MESSAGES: Message[] = [
   {
     role: "ai",
-    content: "Good evening, Analyst. I'm SentinelChat — your AI cybersecurity operations assistant. I have full access to the SentinelAI Fusion platform data including active campaigns, threat intelligence, and detection history.\n\nHow can I assist you today?",
+    content: "Good day, Analyst. I'm SentinelChat — your AI cybersecurity operations assistant. I have full access to your SentinelAI Fusion platform data: your scan history, accuracy metrics, detected tactics, impersonated brands, and the threat knowledge graph.\n\nHow can I assist you today?",
     suggestions: [
-      "Show phishing attacks targeting finance",
-      "Analyze recent URL scans",
-      "Check campaign CAMP-2026-1847",
-      "What threat actor is behind the wire fraud campaign?",
+      "What were my last 5 phishing detections?",
+      "What's my false positive rate?",
+      "Which brand was most impersonated in my scans?",
+      "Show active threat campaigns",
     ],
   },
 ]

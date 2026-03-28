@@ -13,7 +13,7 @@ interface DataPoint {
 }
 
 interface Props {
-  data: DataPoint[]
+  data?: DataPoint[]
   hours?: number
   totalThreats?: number
 }
@@ -49,7 +49,7 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
   )
 }
 
-export function ThreatTimeline({ data, hours = 24, totalThreats = 0 }: Props) {
+export function ThreatTimeline({ data = [], hours = 24, totalThreats = 0 }: Props) {
   const chartData = data.map(d => ({
     time: formatHour(d.time),
     phishing: d.type_breakdown?.phishing || 0,

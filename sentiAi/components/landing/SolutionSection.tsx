@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 
 export function SolutionSection() {
   return (
-    <section id="solution" className="relative py-16 md:py-20 lg:py-24 px-6 bg-[#070D14] overflow-hidden">
+    <section id="solution" className="relative py-16 md:py-20 lg:py-24 px-6 bg-muted overflow-hidden">
       <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.02)_1px,transparent_1px)] bg-[size:60px_60px] opacity-10 pointer-events-none" />
       <div className="absolute top-[30%] left-[-10%] h-[800px] w-[800px] bg-blue-500/5 rounded-full blur-[180px] -z-1" />
 
@@ -48,7 +48,7 @@ export function SolutionSection() {
                  </div>
               </div>
 
-              <div className="absolute top-20 left-4 w-full h-[350px] card-cyber rotate-[-2deg] translate-y-10 group-hover:translate-y-16 group-hover:rotate-0 transition-all duration-1000 p-8 shadow-2xl scale-[0.95] z-10 group-hover:scale-100 bg-[#070D14]/90 backdrop-blur-3xl cursor-none">
+              <div className="absolute top-20 left-4 w-full h-[350px] card-cyber rotate-[-2deg] translate-y-10 group-hover:translate-y-16 group-hover:rotate-0 transition-all duration-1000 p-8 shadow-2xl scale-[0.95] z-10 group-hover:scale-100 bg-muted/90 backdrop-blur-3xl cursor-none">
                  <div className="flex items-center justify-between mb-8 opacity-60">
                     <span className="text-[10px] font-black tracking-widest text-blue-400 uppercase">Correlation Layer v2.4</span>
                     <Badge className="bg-blue-500/10 border-blue-500/20 text-blue-400 text-[8px] h-5 px-3 uppercase font-black tracking-widest">Telemetry-Sync</Badge>

@@ -4,7 +4,7 @@ import { ShieldCheck, Twitter, Github, Linkedin, Mail } from "lucide-react"
 
 export function LandingFooter() {
   return (
-    <footer className="relative py-32 px-6 bg-[#070D14] border-t border-white/5 overflow-hidden">
+    <footer className="relative py-32 px-6 bg-muted border-t border-border/50 overflow-hidden">
       <div className="absolute bottom-[-10%] right-[-10%] h-[400px] w-[500px] bg-blue-500/3 rounded-full blur-[140px] -z-1" />
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-16 items-start">

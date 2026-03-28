@@ -4,10 +4,22 @@ export const WS_BASE = (process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8001")
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface ModelBreakdown {
-  nlp: { score: number; weight: number; tactics: string[]; explanation: string }
-  url: { score: number; weight: number; top_features: string[]; shap_values: Record<string, number> }
-  visual: { score: number; weight: number; matched_brand: string; similarity: number }
-  header: { score: number; weight: number; flags: string[]; spf_result: string; dkim_result: string; dmarc_result: string }
+  nlp: {
+    score: number; weight: number; tactics: string[]; explanation: string
+    top_phrases?: string[]; phishing_intent?: string
+  }
+  url: {
+    score: number; weight: number; top_features: string[]; shap_values: Record<string, number>
+    features?: Record<string, number | boolean | string>
+  }
+  visual: {
+    score: number; weight: number; matched_brand: string; similarity: number
+    screenshot_url?: string
+  }
+  header: {
+    score: number; weight: number; flags: string[]
+    spf_result: string; dkim_result: string; dmarc_result: string
+  }
 }
 
 export interface DetectedTactic {
@@ -24,6 +36,34 @@ export interface ThreatIntelligence {
   global_reach: string[]
 }
 
+export interface DarkWebExposure {
+  domain: string
+  breach_count: number
+  total_exposed: number
+  dark_web_risk: "HIGH" | "MEDIUM" | "LOW" | "NONE" | "UNKNOWN"
+  breaches: { name: string; date: string; pwn_count?: number; data_classes?: string[]; source?: string }[]
+  paste_count?: number
+  sources?: string[]
+}
+
+export interface KillChainStage {
+  stage: string
+  technique: string
+  mitre_id: string
+  description: string
+  risk_score: number
+  active: boolean
+  color: string
+  ps_coverage: string
+}
+
+export interface KillChain {
+  stages: KillChainStage[]
+  overall_risk: string
+  financial_impact: string
+  containment_steps: string[]
+}
+
 export interface AnalysisResult {
   event_id: string
   status: string
@@ -38,6 +78,9 @@ export interface AnalysisResult {
   inference_time_ms: number
   timestamp: string
   urls_analyzed: string[]
+  dark_web_exposure?: DarkWebExposure
+  kill_chain?: KillChain
+  input_type?: "email" | "url" | "headers"
 }
 
 export interface ChatResponse {
@@ -270,4 +313,53 @@ export async function listCampaigns(params?: {
   if (params?.search) qs.set("search", params.search)
   if (params?.limit) qs.set("limit", String(params.limit))
   return apiFetch<{ campaigns: Campaign[]; total: number }>(`/api/v1/campaigns?${qs}`)
+}
+
+// ── PS-01 New Endpoints ───────────────────────────────────────────────────────
+
+export async function analyzeHeaders(headers: string): Promise<AnalysisResult> {
+  return apiFetch("/api/v1/analyze/headers", {
+    method: "POST",
+    body: JSON.stringify({ headers }),
+  })
+}
+
+export async function sandboxUrl(url: string, depth = "standard") {
+  return apiFetch("/api/v1/sandbox/analyze", {
+    method: "POST",
+    body: JSON.stringify({ url, depth }),
+  })
+}
+
+export async function getHistoryStats() {
+  return apiFetch("/api/v1/history/stats")
+}
+
+export async function getHistoryList(page = 1, limit = 15, verdict?: string) {
+  const qs = new URLSearchParams({ page: String(page), limit: String(limit) })
+  if (verdict && verdict !== "ALL") qs.set("verdict", verdict)
+  return apiFetch(`/api/v1/history?${qs}`)
+}
+
+export async function submitFeedback(event_id: string, feedback_type: "correct" | "false_positive" | "missed", note?: string) {
+  return apiFetch("/api/v1/feedback", {
+    method: "POST",
+    body: JSON.stringify({ event_id, feedback_type, note }),
+  })
+}
+
+export async function getGmailStatus() {
+  return apiFetch("/api/v1/gmail/status")
+}
+
+export async function connectGmailDemo() {
+  return apiFetch("/api/v1/gmail/demo-connect")
+}
+
+export async function getGmailInbox(page = 1, riskFilter = "ALL") {
+  return apiFetch(`/api/v1/gmail/inbox?page=${page}&risk_filter=${riskFilter}`)
+}
+
+export async function analyzeGmailMessage(messageId: string) {
+  return apiFetch(`/api/v1/gmail/analyze/${messageId}`, { method: "POST" })
 }

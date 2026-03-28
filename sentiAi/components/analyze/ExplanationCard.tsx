@@ -6,9 +6,11 @@ import { Badge } from "@/components/ui/badge"
 interface ExplanationCardProps {
   explanation: string
   loading?: boolean
+  confidence?: number
+  inferenceMs?: number
 }
 
-export function ExplanationCard({ explanation, loading }: ExplanationCardProps) {
+export function ExplanationCard({ explanation, loading, confidence, inferenceMs }: ExplanationCardProps) {
   return (
     <Card className="card-cyber h-full flex flex-col overflow-hidden relative">
       <div className="absolute top-0 right-0 p-8 opacity-5">
@@ -62,11 +64,16 @@ export function ExplanationCard({ explanation, loading }: ExplanationCardProps) 
                      <ShieldCheck className="h-4 w-4 text-blue-400" />
                   </div>
                   <div>
-                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-400">Confidence Certified</h4>
-                    <p className="text-[8px] text-slate-500 uppercase font-bold tracking-widest mt-0.5">98.9% Signature Match</p>
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-400">AI Forensic Narrative</h4>
+                    <p className="text-[8px] text-slate-500 uppercase font-bold tracking-widest mt-0.5">
+                      {confidence != null ? `${Math.round(confidence * 100)}% model confidence` : "Confidence pending"}
+                    </p>
                   </div>
                </div>
-               <div className="text-[9px] text-slate-500 font-mono">GPT-4o-mini</div>
+               <div className="text-right">
+                 <div className="text-[9px] text-slate-500 font-mono">GPT-4o-mini</div>
+                 {inferenceMs != null && <div className="text-[8px] text-slate-700 font-mono">{inferenceMs}ms</div>}
+               </div>
             </div>
          </div>
       </CardContent>
